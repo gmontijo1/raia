@@ -1,17 +1,19 @@
-// Tela da turma: nadadores, cadastro, e atalhos para o treino.
+// Tela da turma: próximos treinos (agenda e planos), nadadores, cadastro e atalhos.
 
-import { h, aviso, fmtTempo, melhorDe, doCombo, naoEncontrado, botaoConfirmar } from '../util.js';
+import { h, aviso, fmtTempo, melhorDe, doCombo, naoEncontrado, botaoConfirmar, dataLonga, hoje } from '../util.js';
 import * as db from '../db.js';
 import { formTurma } from './inicio.js';
 import { abrirLancamento } from '../lancar.js';
+import { proximasDatas, descricaoTurma, horaCurta } from '../agenda.js';
 
 export async function render(caixa, turmaId) {
   const t = await db.turma(turmaId);
   if (!t || t.apagado) { caixa.append(naoEncontrado('Turma')); return; }
-  const [nads, arquivados, tempos] = await Promise.all([
+  const [nads, arquivados, tempos, planos] = await Promise.all([
     db.nadadoresDaTurma(turmaId),
     db.nadadoresDaTurma(turmaId, { incluirArquivados: true }).then(l => l.filter(n => n.arquivado)),
-    db.temposDaTurma(turmaId)
+    db.temposDaTurma(turmaId),
+    db.planosDaTurma(turmaId)
   ]);
   const recarregar = () => { caixa.textContent = ''; return render(caixa, turmaId); };
 
@@ -28,12 +30,13 @@ export async function render(caixa, turmaId) {
     h('div', { class: 'cabeca' },
       h('div', null,
         h('h2', { text: t.nome }),
-        h('p', { class: 'sub' }, t.horario || 'Sem horário definido', t.exemplo ? ' · ' : '', t.exemplo ? h('span', { class: 'etiqueta', text: 'exemplo' }) : null)),
+        h('p', { class: 'sub' }, descricaoTurma(t) || 'Sem dias de treino definidos', t.exemplo ? ' · ' : '', t.exemplo ? h('span', { class: 'etiqueta', text: 'exemplo' }) : null)),
       h('div', { class: 'acoes' },
         nads.length ? h('a', { class: 'btn primario', href: `#/treino/${t.id}` }, 'Começar treino') : null,
         nads.length ? h('button', { class: 'btn', type: 'button', onclick: () => abrirLancamento({ turmaId, nadadores: nads, aoSalvar: recarregar }) }, 'Lançar tempo à mão') : null,
         h('button', { class: 'btn fantasma', type: 'button', 'aria-expanded': 'false', onclick: e => { edicao.hidden = !edicao.hidden; e.currentTarget.setAttribute('aria-expanded', String(!edicao.hidden)); } }, 'Editar turma'))),
-    edicao);
+    edicao,
+    cartaoAgenda(t, planos, recarregar));
 
   /* nadadores */
   const lista = h('ul', { class: 'lista' });
@@ -93,4 +96,68 @@ export async function render(caixa, turmaId) {
     }
     caixa.append(h('details', { class: 'card' }, h('summary', { text: `Arquivados (${arquivados.length})` }), l));
   }
+}
+
+// Próximas datas de treino (pela agenda da turma) e o treino planejado de cada uma.
+function cartaoAgenda(t, planos, recarregar) {
+  const porData = new Map(planos.map(p => [p.data, p]));
+  const datas = proximasDatas(t.agenda, 14);
+  const dHoje = hoje();
+
+  function editor(data, atual, aoFechar) {
+    const id = `plano-${data}`;
+    const texto = h('textarea', { id, rows: 3, maxlength: 2000, placeholder: 'Ex.: aquecimento 200 m; 8×50 crawl saída 1:30; soltar 100 m' });
+    texto.value = atual || '';
+    const form = h('form', { class: 'editor-plano' },
+      h('label', { class: 'sr', for: id, text: `Treino planejado para ${dataLonga(data)}` }), texto,
+      h('div', { class: 'acoes' },
+        h('button', { class: 'btn pequeno primario', type: 'submit' }, 'Salvar'),
+        h('button', { class: 'btn pequeno fantasma', type: 'button', onclick: aoFechar }, 'Cancelar')));
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      await db.salvarPlano(t.id, data, texto.value);
+      aviso(texto.value.trim() ? 'Treino planejado.' : 'Plano apagado.');
+      recarregar();
+    });
+    setTimeout(() => texto.focus(), 0);
+    return form;
+  }
+
+  const lista = h('ul', { class: 'lista agenda' });
+  for (const { data, hora } of datas) {
+    const p = porData.get(data);
+    const corpo = h('div', { class: 'agenda-corpo' }, p
+      ? h('p', { class: 'plano-texto', text: p.descricao })
+      : h('p', { class: 'sub', text: 'Treino ainda não planejado.' }));
+    const botao = h('button', { class: 'btn pequeno fantasma', type: 'button' }, p ? 'Editar' : 'Planejar');
+    botao.addEventListener('click', () => {
+      botao.hidden = true;
+      corpo.replaceChildren(editor(data, p && p.descricao, () => recarregar()));
+    });
+    lista.append(h('li', { class: 'agenda-item' },
+      h('div', { class: 'agenda-topo' },
+        h('b', { text: `${dataLonga(data)}${hora ? ` · ${horaCurta(hora)}` : ''}` }),
+        data === dHoje ? h('span', { class: 'etiqueta', text: 'hoje' }) : null,
+        botao),
+      corpo));
+  }
+
+  // Data fora da agenda (treino extra, avaliação etc.)
+  const outra = h('input', { type: 'date', id: 'plano-outra-data', min: dHoje });
+  const extra = h('div', { class: 'agenda-extra' },
+    h('label', { class: 'campo', for: 'plano-outra-data' }, h('span', { class: 'lbl', text: 'Planejar outra data' }), outra));
+  outra.addEventListener('change', () => {
+    if (!outra.value) return;
+    const data = outra.value;
+    extra.querySelector('.editor-plano')?.remove();
+    extra.append(editor(data, porData.get(data) && porData.get(data).descricao, () => recarregar()));
+  });
+
+  return h('div', { class: 'card' },
+    h('h3', { text: 'Próximos treinos' }),
+    datas.length
+      ? lista
+      : h('p', { class: 'sub', style: 'margin-top:6px', text: 'Defina os dias de treino em "Editar turma" para as próximas datas aparecerem aqui.' }),
+    extra,
+    h('p', { class: 'sub', style: 'margin-top:8px', text: 'Os alunos veem as datas e o treino planejado no celular deles.' }));
 }

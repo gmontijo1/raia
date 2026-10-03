@@ -5,8 +5,9 @@
 
 import { h, aviso, fmtTempo, fmtDelta, combo, combos, hoje, hora, dataLonga, ESTILOS, DISTANCIAS, porTreino, doCombo, melhorDe, naoEncontrado } from '../util.js';
 import * as db from '../db.js';
-import { minigrafico, graficoRepeticoes } from '../grafico.js';
+import { minigrafico } from '../grafico.js';
 import { abrirLancamento } from '../lancar.js';
+import { conteudoRepeticoes } from '../repeticoes.js';
 
 // Estado do cronômetro por turma. Fica na memória enquanto o app está aberto, então dá
 // para olhar outra tela e voltar sem perder quem está nadando.
@@ -55,6 +56,7 @@ export async function render(caixa, turmaId) {
   const S = sessao(turmaId);
   const dHoje = hoje();
   const porId = new Map(nads.map(n => [n.id, n]));
+  const planoHoje = (await db.planosDaTurma(turmaId)).find(p => p.data === dHoje);
 
   caixa.append(h('div', null, h('a', { class: 'voltar', href: `#/turma/${t.id}` }, `← ${t.nome}`)));
   caixa.append(h('div', { class: 'cabeca' },
@@ -63,6 +65,7 @@ export async function render(caixa, turmaId) {
       class: 'btn', type: 'button',
       onclick: () => abrirLancamento({ turmaId, nadadores: nads, dist: cfg.dist, estilo: cfg.estilo, aoSalvar: reg => { tempos.push(reg); pintarTodos(); listarSessao(); } })
     }, 'Lançar tempo à mão')) : null));
+  if (planoHoje) caixa.append(h('div', { class: 'card plano' }, h('span', { class: 'lbl', text: 'Treino planejado para hoje' }), h('p', { class: 'plano-texto', text: planoHoje.descricao })));
 
   if (!nads.length) {
     caixa.append(h('div', { class: 'card vazio' },
@@ -296,13 +299,6 @@ export async function render(caixa, turmaId) {
   const teclaPainel = e => { if (e.key === 'Escape' && painelId) fecharPainel(); };
   document.addEventListener('keydown', teclaPainel);
 
-  function bloco(rotulo, valor, detalhe, classe) {
-    return h('div', { class: 'bloco' },
-      h('span', { class: 'lbl', text: rotulo }),
-      h('span', { class: 'v' + (classe ? ' ' + classe : ''), text: valor }),
-      h('span', { class: 'd', text: detalhe }));
-  }
-
   function desenharPainel() {
     if (!painelId) return;
     const id = painelId;
@@ -360,46 +356,7 @@ export async function render(caixa, turmaId) {
         h('p', { text: `Toque em LARGADA quando ${n.nome} sair. Cada repetição aparece aqui na hora.` }),
         recorde != null ? h('p', { class: 'sub', text: `Melhor tempo pessoal nos ${combo(dist, estilo)}: ${fmtTempo(recorde)}` }) : null));
     } else {
-      const ts = reps.map(r => r.t);
-      const N = ts.length;
-      const media = ts.reduce((a, b) => a + b, 0) / N;
-      let ib = 0;
-      ts.forEach((t, i) => { if (t < ts[ib]) ib = i; });
-      const melhorHoje = ts[ib], pior = Math.max(...ts);
-      const novoRecorde = recorde != null && melhorHoje < recorde;
-      const variacao = ts[N - 1] - ts[0];
-      corpo.push(h('div', { class: 'blocos' },
-        bloco('Repetições', String(N), combo(dist, estilo)),
-        bloco('Média', fmtTempo(media), N > 1 ? `de ${fmtTempo(melhorHoje)} a ${fmtTempo(pior)}` : 'só uma repetição até agora'),
-        bloco('Melhor de hoje', fmtTempo(melhorHoje),
-          novoRecorde ? `★ novo melhor pessoal (${fmtDelta(melhorHoje - recorde)})`
-            : recorde != null ? `na ${ib + 1}ª · ${fmtDelta(melhorHoje - recorde)} do melhor pessoal` : `na ${ib + 1}ª repetição`,
-          novoRecorde ? 'bom' : null),
-        N > 1 ? bloco('Da 1ª para a última', `${fmtDelta(variacao)} s`,
-          variacao > 0.005 ? 'mais lento no fim' : variacao < -0.005 ? 'mais rápido no fim' : 'mesmo tempo') : null));
-
-      // A linha do melhor pessoal só entra no gráfico se estiver perto dos tempos de hoje;
-      // longe demais, ela esmagaria a diferença entre as repetições (o que importa ver aqui).
-      const refGrafico = recorde != null && Math.abs(recorde - media) <= media * 0.15 ? recorde : null;
-      const host = h('div', { class: 'grafico' });
-      corpo.push(h('div', { class: 'card' },
-        h('h3', { text: `Repetição por repetição · ${combo(dist, estilo)}` }),
-        host,
-        h('p', { class: 'dica-eixo', text: refGrafico != null
-          ? 'Cada ponto é uma repetição, na ordem em que foi nadada. A linha verde é o melhor tempo pessoal antes de hoje.'
-          : 'Cada ponto é uma repetição, na ordem em que foi nadada.' })));
-      graficoRepeticoes(host, reps.map(r => ({ t: r.t, hora: hora(r.criadoEm) })), { referencia: refGrafico, titulo: `${n.nome}, ${combo(dist, estilo)} hoje` });
-
-      corpo.push(h('div', { class: 'card' },
-        h('h3', { text: 'Todas as repetições' }),
-        h('div', { class: 'tabela' }, h('table', null,
-          h('thead', null, h('tr', null,
-            h('th', { text: 'Rep.' }), h('th', { class: 'n', text: 'Tempo' }), h('th', { class: 'n', text: 'vs anterior' }), h('th', { class: 'n', text: 'Hora' }))),
-          h('tbody', null, reps.map((r, i) => h('tr', null,
-            h('td', { text: `${i + 1}ª` }),
-            h('td', { class: 'n' + (i === ib ? ' bom' : ''), text: (i === ib ? '★ ' : '') + fmtTempo(r.t) }),
-            h('td', { class: 'n mut', text: i ? fmtDelta(r.t - reps[i - 1].t) : '–' }),
-            h('td', { class: 'n mut', text: hora(r.criadoEm) }))))))));
+      corpo.push(...conteudoRepeticoes({ reps, recorde, nome: n.nome, dist, estilo }));
     }
     corpo.push(h('a', { class: 'link', href: `#/nadador/${id}` }, 'Ver a evolução em todos os treinos →'));
 

@@ -25,7 +25,10 @@ export async function criarTurmaExemplo() {
   const gauss = () => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
   const agora = agoraISO();
   const disp = await dispositivoId();
-  const turma = { id: novoId(), nome: 'Turma de exemplo', horario: 'terças e quintas, 7h', exemplo: true, arquivada: false, apagado: false, criadoEm: agora, atualizadoEm: agora };
+  const turma = {
+    id: novoId(), nome: 'Turma de exemplo', horario: 'terças e quintas, 7h', agenda: [{ dia: 2, hora: '07:00' }, { dia: 4, hora: '07:00' }],
+    exemplo: true, arquivada: false, apagado: false, criadoEm: agora, atualizadoEm: agora
+  };
 
   const datas = [];
   const fim = new Date(); fim.setDate(fim.getDate() - 1);

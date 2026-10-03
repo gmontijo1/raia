@@ -1,0 +1,2 @@
+supabase.js: @supabase/supabase-js 2.117.2 (build UMD de https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js).
+Fica dentro do app para funcionar sem internet. Para atualizar, baixe a versão nova no mesmo caminho e suba a versão do app.
