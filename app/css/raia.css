@@ -243,3 +243,42 @@ dialog h3 { margin-bottom: 12px; }
 .rodape { font-size: 12px; color: var(--muted); text-align: center; margin-top: 32px; }
 
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+
+/* ---------- conta, sincronização e entrada ---------- */
+.sincronia { appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); border-radius: 999px; padding: 4px 12px 4px 10px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.sincronia::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--axis); flex: none; }
+.sincronia[data-fase="ok"]::before { background: var(--good); }
+.sincronia[data-fase="enviando"]::before { background: var(--accent); }
+.sincronia[data-fase="offline"]::before { background: var(--rope); }
+.sincronia[data-fase="erro"] { color: var(--danger); border-color: var(--danger); }
+.sincronia[data-fase="erro"]::before { background: var(--danger); }
+.sincronia:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.entrada { max-width: 440px; margin: 24px auto 0; display: flex; flex-direction: column; gap: 12px; padding: 24px; }
+.entrada-form { display: flex; flex-direction: column; gap: 8px; }
+.btn.grande { min-height: 52px; font-size: 16px; width: 100%; }
+.campo-codigo { min-height: 56px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 8px 14px; font: 600 26px/1 var(--font-mono); letter-spacing: .12em; text-align: center; text-transform: uppercase; width: 100%; }
+.campo-codigo:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.mono { font-family: var(--font-mono); letter-spacing: .06em; }
+.area-codigo:not(:empty) { margin-top: 14px; }
+.caixa-codigo { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px dashed var(--accent); border-radius: 12px; background: var(--surface-2); }
+.caixa-codigo .codigo { font: 600 32px/1.1 var(--font-mono); letter-spacing: .14em; }
+.caixa-codigo .mensagem { overflow-wrap: anywhere; }
+.conta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+
+/* ---------- agenda e treino planejado ---------- */
+.agenda { margin-top: 8px; }
+.agenda-item { padding: 10px 0; display: flex; flex-direction: column; gap: 4px; }
+.agenda-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.agenda-topo b { font-weight: 600; }
+.agenda-topo .btn { margin-left: auto; }
+.agenda-extra { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; max-width: 420px; }
+.editor-plano { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.editor-plano textarea { width: 100%; min-height: 84px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 8px 12px; resize: vertical; line-height: 1.5; }
+.editor-plano textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.plano { display: flex; flex-direction: column; gap: 4px; border-left: 4px solid var(--accent); }
+.plano-texto { white-space: pre-wrap; overflow-wrap: anywhere; }
+.titulo-secao { margin-top: 8px; }
+.presenca.dias label { min-width: 64px; justify-content: center; }
+.sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

@@ -80,6 +80,34 @@ GitHub Pages, publicado sozinho pelo workflow `.github/workflows/publicar.yml` a
 que mexe em `app/` (ou manualmente em Actions → Publicar app → Run workflow). Só a pasta `app/` vai
 para o site. Endereço: https://gmontijo1.github.io/raia/
 
+## Nuvem, login e papéis (v0.4.0)
+
+- **Banco:** Supabase (servidor em São Paulo). O esquema inteiro está em `supabase/esquema.sql`
+  (tabelas, RLS, funções de convite); rodar de novo no SQL Editor é seguro. A conexão fica em
+  `app/js/config.js` (URL + chave **pública** anon/publishable). Com o `config.js` vazio, o app
+  volta ao modo local, sem login. **Nunca** pôr a chave service_role/secret nem a senha do banco
+  no repositório.
+- **Papéis:** `aluno` lê só o próprio cadastro, os próprios tempos, a agenda e os planos da turma;
+  `professor` lê e grava tudo e gera código de aluno; `master` também convida professor/master e
+  remove acessos. Quem não tem papel não vê nada. Quem garante é a RLS do banco, não o app.
+- **Entrada:** Google (OAuth do Supabase) + código de convite de 8 caracteres, de uso único, com
+  validade de 30 dias. Na primeira vez, a pessoa digita o código (`resgatar_convite`) e ganha o
+  papel. O primeiro código master sai no fim do `esquema.sql`.
+- **Modos do app** (`app/js/app.js`): `local`, `visitante` (só "Entrar"), `sem-papel` (só o
+  código), `aluno` (`telas/aluno.js`), `equipe` (o app inteiro; master também vê
+  `telas/acessos.js`). Sem internet, usa o último perfil guardado no aparelho.
+- **Sincronização** (`app/js/sincronia.js`, só para a equipe): tudo é gravado primeiro no
+  IndexedDB. Depois o app envia o que mudou (`atualizadoEm` maior que o último envio, via upsert)
+  e baixa o que outros aparelhos gravaram (`sincronizado_em`, carimbado pelo banco, com 5 min de
+  folga). Num conflito, ganha o `atualizado_em` mais novo (trigger `carimbar`). A turma de exemplo
+  nunca sobe.
+- **Agenda:** a turma tem `agenda` (dias da semana + horário) e `planos` (treino planejado por
+  data). O professor planeja na tela da turma, e o aluno vê "Seus treinos desta semana".
+- **Biblioteca:** `app/vendor/supabase.js` (versão fixa, ver `LEIA-ME.txt` ao lado), dentro do app
+  para funcionar sem internet.
+- **Visita diária:** o workflow `manter-nuvem.yml` chama a função `ping` todo dia, para o
+  projeto gratuito não "dormir" (ele dorme com 7 dias sem uso).
+
 ## Próximas etapas
 
 1. **Validar com a coordenação do projeto de natação.**
