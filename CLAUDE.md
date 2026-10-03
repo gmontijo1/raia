@@ -33,7 +33,7 @@ treino por raias sem pedido dele.
 
 ## Estado atual
 
-- **App v0.2.0 no ar:** https://gmontijo1.github.io/raia/ (ver "Base do app" e "Publicação").
+- **App v0.3.0 no ar:** https://gmontijo1.github.io/raia/ (ver "Base do app" e "Publicação").
 - **Protótipo v1, dados fictícios:** `prototipo/raia-natacao.html`, publicado como Artifact em
   https://claude.ai/artifact/UyJ5x3KDjp6NZPqbAydNPw (para atualizar, publicar de novo nessa URL).
 - **O caderno registra só o tempo de 25 m e de 50 m de cada aluno.** Fotos do caderno e a planilha do
@@ -48,7 +48,9 @@ direto no navegador. Não usar bundler, npm ou TypeScript: o PC do GÊ não tem 
 
 - **Telas** (`app/js/telas/`): `inicio` (turmas), `turma` (nadadores, cadastro um a um ou vários de
   uma vez), `treino` (cartão por nadador com LARGADA/PARAR, "Largar todos", cancelar largada, trava de
-  1 s após o PARAR contra toque duplo, mínimo de 2 s por tempo, presença, desfazer), `nadador`
+  1 s após o PARAR contra toque duplo, mínimo de 2 s por tempo, presença, desfazer; tocar no nome abre
+  o painel do nadador com as repetições de hoje em tempo real, com o próprio LARGADA/PARAR — tela
+  cheia no celular, lateral a partir de 900px), `nadador`
   (evolução por distância e estilo, tabela, apagar tempo, editar/arquivar) e `dados` (planilha CSV,
   cópia de segurança JSON, proteção do armazenamento).
 - **Dados** (`app/js/db.js`): IndexedDB no aparelho. Lojas `turmas`, `nadadores`, `tempos` e

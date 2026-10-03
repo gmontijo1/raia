@@ -1,10 +1,11 @@
 // Tela de treino: o cronômetro de beira de piscina.
 // Cada nadador tem o próprio cronômetro: LARGADA quando ele sai, PARAR quando ele chega.
 // O tempo fica gravado no aparelho na hora, sem caderno e sem planilha.
+// Tocar no nome abre o painel do nadador com as repetições de hoje, atualizado a cada PARAR.
 
-import { h, aviso, fmtTempo, fmtDelta, combo, hoje, hora, dataLonga, ESTILOS, DISTANCIAS, porTreino, doCombo, melhorDe, naoEncontrado } from '../util.js';
+import { h, aviso, fmtTempo, fmtDelta, combo, combos, hoje, hora, dataLonga, ESTILOS, DISTANCIAS, porTreino, doCombo, melhorDe, naoEncontrado } from '../util.js';
 import * as db from '../db.js';
-import { minigrafico } from '../grafico.js';
+import { minigrafico, graficoRepeticoes } from '../grafico.js';
 import { abrirLancamento } from '../lancar.js';
 
 // Estado do cronômetro por turma. Fica na memória enquanto o app está aberto, então dá
@@ -139,13 +140,15 @@ export async function render(caixa, turmaId) {
       const cancelar = h('button', { class: 'link', type: 'button', hidden: true, onclick: () => cancelarLargada(n.id) }, 'Cancelar largada');
       const relogio = h('div', { class: 'at-relogio', 'aria-live': 'off' });
       const botao = h('button', { class: 'btn-cron', type: 'button', onclick: () => tocar(n.id) });
+      const nomeBtn = h('button', { class: 'at-nome-btn', type: 'button', 'aria-label': `Ver as repetições de hoje de ${n.nome}`, onclick: () => abrirPainel(n.id) },
+        h('span', { text: n.nome }), h('span', { class: 'seta', 'aria-hidden': 'true', text: '›' }));
       const card = h('div', { class: 'atleta', 'data-st': 'pronto' },
         h('div', { class: 'at-info' },
-          h('div', { class: 'at-nome' }, h('span', { text: n.nome }), rep),
+          h('div', { class: 'at-nome' }, nomeBtn, rep),
           h('div', { class: 'at-melhor' }, melhor, mini),
           nota, cancelar),
         h('div', { class: 'at-acao' }, relogio, botao));
-      cards.set(n.id, { card, rep, melhor, mini, nota, cancelar, relogio, botao, nome: n.nome });
+      cards.set(n.id, { card, rep, melhor, mini, nota, cancelar, relogio, botao, nomeBtn, nome: n.nome });
       grade.append(card);
     }
     for (const [id, cb] of caixasPresenca) cb.disabled = S.rodando.has(id);
@@ -187,6 +190,7 @@ export async function render(caixa, turmaId) {
       if (ult) c.nota.append(h('span', { text: `último: ${combo(ult.dist, ult.estilo)}` }), ult.id ? chip(ult) : null);
     }
     c.botao.disabled = (S.pausa.get(id) || 0) > performance.now();
+    if (painelId === id) desenharPainel();
   }
   function pintarTodos() {
     for (const id of cards.keys()) pintar(id);
@@ -198,6 +202,7 @@ export async function render(caixa, turmaId) {
   function largar(id, t0) {
     if ((S.pausa.get(id) || 0) > performance.now() || S.rodando.has(id)) return;
     S.rodando.set(id, { t0, dist: cfg.dist, estilo: cfg.estilo });
+    if (painelId === id) painelCombo = `${cfg.dist}|${cfg.estilo}`;
     const cb = caixasPresenca.get(id);
     if (cb) cb.disabled = true;
   }
@@ -248,6 +253,7 @@ export async function render(caixa, turmaId) {
       });
       tempos.push(reg);
       S.ultimo.set(id, reg);
+      if (painelId === id) painelCombo = `${R.dist}|${R.estilo}`;
       const recorde = p != null && tt < p;
       vibrar(recorde ? [30, 40, 30] : 25);
       pintar(id);
@@ -264,6 +270,145 @@ export async function render(caixa, turmaId) {
     if (!algumRodando()) liberarTela();
   }
 
+  /* ---------- painel do nadador: repetições de hoje, em tempo real ---------- */
+  const painel = h('aside', { class: 'painel', role: 'dialog', 'aria-modal': 'false', 'aria-labelledby': 'painel-titulo', hidden: true });
+  caixa.append(painel);
+  let painelId = null;       // nadador aberto no painel
+  let painelCombo = null;    // "dist|estilo" mostrado; null = escolher sozinho
+  let painelRelogio = null;  // relógio do painel, atualizado pelo tick
+
+  function abrirPainel(id) {
+    painelId = id;
+    painelCombo = null;
+    painel.hidden = false;
+    painel.scrollTop = 0;
+    desenharPainel();
+    document.getElementById('painel-titulo')?.focus();
+  }
+  function fecharPainel() {
+    const id = painelId;
+    painelId = null;
+    painelRelogio = null;
+    painel.hidden = true;
+    painel.textContent = '';
+    cards.get(id)?.nomeBtn.focus();
+  }
+  const teclaPainel = e => { if (e.key === 'Escape' && painelId) fecharPainel(); };
+  document.addEventListener('keydown', teclaPainel);
+
+  function bloco(rotulo, valor, detalhe, classe) {
+    return h('div', { class: 'bloco' },
+      h('span', { class: 'lbl', text: rotulo }),
+      h('span', { class: 'v' + (classe ? ' ' + classe : ''), text: valor }),
+      h('span', { class: 'd', text: detalhe }));
+  }
+
+  function desenharPainel() {
+    if (!painelId) return;
+    const id = painelId;
+    const n = porId.get(id);
+    const R = S.rodando.get(id);
+    const doDia = tempos.filter(r => r.nadadorId === id && r.data === dHoje)
+      .sort((a, b) => (a.criadoEm < b.criadoEm ? -1 : 1));
+    const chave = (d, e) => `${d}|${e}`;
+    const ultimo = doDia[doDia.length - 1];
+    const atual = painelCombo || (R ? chave(R.dist, R.estilo) : ultimo ? chave(ultimo.dist, ultimo.estilo) : chave(cfg.dist, cfg.estilo));
+    const [dTxt, estilo] = atual.split('|');
+    const dist = +dTxt;
+    const reps = doDia.filter(r => r.dist === dist && r.estilo === estilo);
+    const recorde = melhorDe(tempos.filter(r => r.nadadorId === id && r.dist === dist && r.estilo === estilo && r.data < dHoje));
+
+    /* cabeçalho com o cronômetro do próprio nadador */
+    painelRelogio = h('div', { class: 'at-relogio' });
+    const botao = h('button', { class: 'btn-cron', type: 'button', onclick: () => tocar(id) });
+    if (R) {
+      botao.textContent = 'PARAR';
+      botao.className = 'btn-cron parar';
+      botao.setAttribute('aria-label', `Parar o tempo de ${n.nome}`);
+      painelRelogio.textContent = fmtTempo((performance.now() - R.t0) / 1000);
+    } else {
+      botao.textContent = 'LARGADA';
+      botao.className = 'btn-cron largar';
+      botao.setAttribute('aria-label', `Largada de ${n.nome}`);
+    }
+    botao.disabled = (S.pausa.get(id) || 0) > performance.now();
+    const cab = h('div', { class: 'painel-cab', 'data-st': R ? 'nadando' : 'pronto' },
+      h('div', { class: 'at-info' },
+        h('h3', { id: 'painel-titulo', class: 'painel-nome', tabindex: '-1', text: n.nome }),
+        h('p', { class: 'sub', text: `Treino de hoje · ${dataLonga(dHoje)}` }),
+        h('p', { class: 'at-nota', text: R ? `nadando ${combo(R.dist, R.estilo)}` : `próxima largada: ${combo(cfg.dist, cfg.estilo)}` }),
+        R ? h('button', { class: 'link', type: 'button', onclick: () => cancelarLargada(id) }, 'Cancelar largada') : null),
+      h('div', { class: 'at-acao' }, painelRelogio, botao));
+
+    /* escolha de distância e estilo, se ele nadou mais de um hoje */
+    const opcoes = combos(doDia).map(([d, e]) => chave(d, e));
+    if (!opcoes.includes(atual)) opcoes.push(atual);
+    const seletor = opcoes.length > 1 ? h('div', { class: 'seg', role: 'radiogroup', 'aria-label': 'Distância e estilo' },
+      opcoes.map(o => {
+        const [d, e] = o.split('|');
+        const idr = `pc-${d}-${e}`;
+        const inp = h('input', { type: 'radio', name: 'painel-combo', id: idr, value: o });
+        if (o === atual) inp.checked = true;
+        inp.addEventListener('change', () => { painelCombo = o; desenharPainel(); });
+        return [inp, h('label', { for: idr, text: combo(+d, e) })];
+      })) : null;
+
+    const corpo = [];
+    if (!reps.length) {
+      corpo.push(h('div', { class: 'card vazio' },
+        h('h3', { text: `Nenhuma repetição de ${combo(dist, estilo)} hoje` }),
+        h('p', { text: `Toque em LARGADA quando ${n.nome} sair. Cada repetição aparece aqui na hora.` }),
+        recorde != null ? h('p', { class: 'sub', text: `Melhor tempo pessoal nos ${combo(dist, estilo)}: ${fmtTempo(recorde)}` }) : null));
+    } else {
+      const ts = reps.map(r => r.t);
+      const N = ts.length;
+      const media = ts.reduce((a, b) => a + b, 0) / N;
+      let ib = 0;
+      ts.forEach((t, i) => { if (t < ts[ib]) ib = i; });
+      const melhorHoje = ts[ib], pior = Math.max(...ts);
+      const novoRecorde = recorde != null && melhorHoje < recorde;
+      const variacao = ts[N - 1] - ts[0];
+      corpo.push(h('div', { class: 'blocos' },
+        bloco('Repetições', String(N), combo(dist, estilo)),
+        bloco('Média', fmtTempo(media), N > 1 ? `de ${fmtTempo(melhorHoje)} a ${fmtTempo(pior)}` : 'só uma repetição até agora'),
+        bloco('Melhor de hoje', fmtTempo(melhorHoje),
+          novoRecorde ? `★ novo melhor pessoal (${fmtDelta(melhorHoje - recorde)})`
+            : recorde != null ? `na ${ib + 1}ª · ${fmtDelta(melhorHoje - recorde)} do melhor pessoal` : `na ${ib + 1}ª repetição`,
+          novoRecorde ? 'bom' : null),
+        N > 1 ? bloco('Da 1ª para a última', `${fmtDelta(variacao)} s`,
+          variacao > 0.005 ? 'mais lento no fim' : variacao < -0.005 ? 'mais rápido no fim' : 'mesmo tempo') : null));
+
+      // A linha do melhor pessoal só entra no gráfico se estiver perto dos tempos de hoje;
+      // longe demais, ela esmagaria a diferença entre as repetições (o que importa ver aqui).
+      const refGrafico = recorde != null && Math.abs(recorde - media) <= media * 0.15 ? recorde : null;
+      const host = h('div', { class: 'grafico' });
+      corpo.push(h('div', { class: 'card' },
+        h('h3', { text: `Repetição por repetição · ${combo(dist, estilo)}` }),
+        host,
+        h('p', { class: 'dica-eixo', text: refGrafico != null
+          ? 'Cada ponto é uma repetição, na ordem em que foi nadada. A linha verde é o melhor tempo pessoal antes de hoje.'
+          : 'Cada ponto é uma repetição, na ordem em que foi nadada.' })));
+      graficoRepeticoes(host, reps.map(r => ({ t: r.t, hora: hora(r.criadoEm) })), { referencia: refGrafico, titulo: `${n.nome}, ${combo(dist, estilo)} hoje` });
+
+      corpo.push(h('div', { class: 'card' },
+        h('h3', { text: 'Todas as repetições' }),
+        h('div', { class: 'tabela' }, h('table', null,
+          h('thead', null, h('tr', null,
+            h('th', { text: 'Rep.' }), h('th', { class: 'n', text: 'Tempo' }), h('th', { class: 'n', text: 'vs anterior' }), h('th', { class: 'n', text: 'Hora' }))),
+          h('tbody', null, reps.map((r, i) => h('tr', null,
+            h('td', { text: `${i + 1}ª` }),
+            h('td', { class: 'n' + (i === ib ? ' bom' : ''), text: (i === ib ? '★ ' : '') + fmtTempo(r.t) }),
+            h('td', { class: 'n mut', text: i ? fmtDelta(r.t - reps[i - 1].t) : '–' }),
+            h('td', { class: 'n mut', text: hora(r.criadoEm) }))))))));
+    }
+    corpo.push(h('a', { class: 'link', href: `#/nadador/${id}` }, 'Ver a evolução em todos os treinos →'));
+
+    painel.textContent = '';
+    painel.append(h('div', { class: 'painel-in' },
+      h('div', { class: 'painel-topo' }, h('button', { class: 'link', type: 'button', onclick: fecharPainel }, '← Voltar ao treino')),
+      cab, seletor, ...corpo));
+  }
+
   /* ---------- relógio ---------- */
   let raf = 0;
   function tick() {
@@ -275,6 +420,7 @@ export async function render(caixa, turmaId) {
       if (!c) continue;
       algum = true;
       c.relogio.textContent = fmtTempo((agora - R.t0) / 1000);
+      if (painelId === id && painelRelogio) painelRelogio.textContent = c.relogio.textContent;
     }
     if (algum) raf = requestAnimationFrame(tick);
   }
@@ -322,6 +468,7 @@ export async function render(caixa, turmaId) {
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
     document.removeEventListener('visibilitychange', aoVoltar);
+    document.removeEventListener('keydown', teclaPainel);
     if (!algumRodando()) liberarTela();
   };
 }

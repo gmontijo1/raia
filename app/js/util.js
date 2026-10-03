@@ -21,7 +21,7 @@ export function h(tag, attrs, ...filhos) {
       else el.setAttribute(k, v === true ? '' : v);
     }
   }
-  for (const f of filhos.flat()) {
+  for (const f of filhos.flat(Infinity)) {
     if (f == null || f === false) continue;
     el.append(f.nodeType ? f : document.createTextNode(String(f)));
   }

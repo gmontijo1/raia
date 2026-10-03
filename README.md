@@ -17,6 +17,8 @@ histórico, com um gráfico de evolução para cada um.
 - Turmas e nadadores (um a um ou colando a lista inteira).
 - Cronômetro por nadador: LARGADA e PARAR no cartão de cada um, "Largar todos" para saída em
   grupo, cancelar largada, presença do dia, desfazer.
+- Tocando no nome do nadador durante o treino: as repetições de hoje em tempo real (gráfico
+  repetição por repetição, média, melhor do dia, quanto caiu ou subiu da 1ª para a última).
 - Avisa na hora quando sai o melhor tempo de alguém.
 - Lançar tempo à mão (para tempos do cronômetro físico ou do caderno).
 - Evolução de cada nadador: gráfico por distância e estilo, e a lista de todos os tempos.
