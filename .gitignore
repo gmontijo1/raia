@@ -1,0 +1,21 @@
+# Material real (caderno, planilhas, exportações) fica só no PC, nunca no repositório
+privado/
+*.xlsx
+*.xls
+*.ods
+*.csv
+
+# Segredos e configurações locais
+.env
+.env.*
+*.local
+
+# Dependências e builds
+node_modules/
+dist/
+build/
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini

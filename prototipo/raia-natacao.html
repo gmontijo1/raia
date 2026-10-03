@@ -1,0 +1,938 @@
+<title>Raia Natação</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: app de beira de piscina. Cabeçalho fixo com abas e uma faixa de "corda de raia";
+   conteúdo em coluna de até 1120px; raias em grade (1 coluna no celular, 2 a partir de 760px). */
+:root{
+  --bg:#edf3f5;
+  --surface:#ffffff;
+  --surface-2:#f4f8f9;
+  --ink:#0d1c26;
+  --ink-2:#465867;
+  --muted:#6c7d89;
+  --line:#d5e0e5;
+  --axis:#b4c3ca;
+  --accent:#0a6c8c;
+  --accent-ink:#ffffff;
+  --rope:#e5a300;
+  --rope-soft:#fcf1d2;
+  --good:#0ca30c;
+  --good-text:#006300;
+  --good-soft:#e1f3e1;
+  --series:#2a78d6;
+  --series-soft:rgba(42,120,214,.10);
+  --tip-bg:#0d1c26;
+  --tip-ink:#ffffff;
+  --font-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0a1319; --surface:#111d25; --surface-2:#0e1920; --ink:#e8f1f4; --ink-2:#a6b8c2; --muted:#82949f;
+    --line:#22333d; --axis:#3a4d57; --accent:#43b4d8; --accent-ink:#03161d; --rope:#f2b630; --rope-soft:#352b12;
+    --good:#0ca30c; --good-text:#0ca30c; --good-soft:#11301a; --series:#3987e5; --series-soft:rgba(57,135,229,.16);
+    --tip-bg:#e8f1f4; --tip-ink:#0d1c26; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0a1319; --surface:#111d25; --surface-2:#0e1920; --ink:#e8f1f4; --ink-2:#a6b8c2; --muted:#82949f;
+  --line:#22333d; --axis:#3a4d57; --accent:#43b4d8; --accent-ink:#03161d; --rope:#f2b630; --rope-soft:#352b12;
+  --good:#0ca30c; --good-text:#0ca30c; --good-soft:#11301a; --series:#3987e5; --series-soft:rgba(57,135,229,.16);
+  --tip-bg:#e8f1f4; --tip-ink:#0d1c26; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--ink);font:400 15px/1.5 var(--font-body);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+button,select,input,textarea{font:inherit;color:inherit}
+h1,h2,h3{margin:0;text-wrap:balance}
+h3{font-size:17px;font-weight:600}
+
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg)}
+.top-in{max-width:1120px;margin:0 auto;padding:12px 16px 0;display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px}
+.brand{display:flex;align-items:center;gap:12px;flex:1 1 auto;min-width:0}
+.logo{font:800 32px/1 var(--font-display);letter-spacing:.07em;text-transform:uppercase}
+.tag{font-size:12px;color:var(--ink-2);border:1px solid var(--line);border-radius:999px;padding:2px 10px;white-space:nowrap}
+.tabs{display:flex;gap:2px;width:100%;overflow-x:auto}
+.tab{appearance:none;background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px 9px;font-weight:600;font-size:15px;color:var(--ink-2);cursor:pointer;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.rope{height:5px;background:repeating-linear-gradient(90deg,var(--rope) 0 12px,var(--accent) 12px 24px,var(--surface) 24px 36px,var(--accent) 36px 48px)}
+
+.wrap{max-width:1120px;margin:0 auto;padding-inline:16px;padding-block:20px 48px}
+.panel{display:flex;flex-direction:column;gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.card-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
+.lbl{font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.sub{color:var(--ink-2);font-size:14px;margin:2px 0 0}
+.hint{margin:0;color:var(--ink-2);font-size:14px;max-width:70ch}
+.hint b{color:var(--ink)}
+
+.setbar{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:6px}
+.seg{display:inline-flex;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.seg input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.seg label{padding:6px 14px;border-radius:8px;cursor:pointer;font-weight:500;min-height:40px;display:inline-flex;align-items:center}
+.seg input:checked+label{background:var(--ink);color:var(--bg)}
+.seg input:focus-visible+label{outline:2px solid var(--accent);outline-offset:1px}
+.check{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:14px;color:var(--ink-2);cursor:pointer}
+.check input{width:20px;height:20px;accent-color:var(--accent)}
+
+.lanes{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:760px){.lanes{grid-template-columns:1fr 1fr}}
+.lane{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.lane-head{display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;border-bottom:1px solid var(--line);background:var(--surface-2)}
+.lane-n{font:800 26px/1 var(--font-display);letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+.lane-meta{display:flex;flex-direction:column;flex:1 1 auto;min-width:0}
+.lane-clock{font:600 22px/1.15 var(--font-mono);font-variant-numeric:tabular-nums}
+.lane-what{font-size:12px;color:var(--muted)}
+.btn{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:0 16px;min-height:44px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent}
+.btn.small{min-height:36px;padding:0 12px;font-size:13px}
+
+.swimmers{display:flex;flex-direction:column}
+.sw{appearance:none;border:0;border-top:1px solid var(--line);background:var(--surface);text-align:left;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:12px 14px;min-height:76px;cursor:pointer;width:100%}
+.sw:first-child{border-top:0}
+.sw:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.sw-name{font-weight:600;font-size:16px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;min-width:0}
+.sw-rep{font-size:11px;font-weight:600;color:var(--ink-2);border:1px solid var(--line);border-radius:999px;padding:0 7px}
+.sw-best{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:10px;min-width:0}
+.sw-big{grid-row:1 / span 2;grid-column:2;align-self:center;text-align:right;font:600 26px/1 var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.sw-note{grid-column:1 / -1}
+.sw-note:empty{display:none}
+.sw[data-st="espera"] .sw-big{color:var(--axis)}
+.sw[data-st="aguarda"]{background:var(--surface-2)}
+.sw[data-st="aguarda"] .sw-big{font-size:16px;color:var(--ink-2)}
+.sw[data-st="nadando"]{background:var(--rope-soft);box-shadow:inset 4px 0 0 var(--rope)}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;border-radius:999px;padding:1px 8px;white-space:nowrap}
+.chip.pb{background:var(--good-soft);color:var(--good-text)}
+.chip.neutral{color:var(--ink-2);border:1px solid var(--line)}
+.spark{display:block;flex:none}
+
+.sess{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column}
+.sess li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 14px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.sess li.vazio{display:block}
+.sess .t{font:600 18px/1 var(--font-mono);font-variant-numeric:tabular-nums;min-width:5.5ch}
+.sess .who{min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:3px}
+.sess .who b{font-weight:600}
+.sess .who span.meta{font-size:13px;color:var(--muted)}
+.empty{color:var(--muted);font-size:14px;margin:0;padding:4px 0}
+
+.pick{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+select{min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:0 12px;font-weight:600}
+select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.who-head h2{font:800 42px/1 var(--font-display);letter-spacing:.03em;text-transform:uppercase}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tile .v{font:600 30px/1.1 var(--font-mono)}
+.tile .v.good{color:var(--good-text)}
+.tile .d{font-size:13px;color:var(--ink-2)}
+.charts{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:900px){.charts{grid-template-columns:1fr 1fr}}
+.chart{position:relative;width:100%;min-width:0;margin-top:10px}
+.chart svg{display:block;width:100%;height:auto;touch-action:pan-y}
+.chart:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:6px}
+.tip{position:absolute;pointer-events:none;background:var(--tip-bg);color:var(--tip-ink);border-radius:8px;padding:6px 10px;font-size:12px;line-height:1.35;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:2}
+.tip b{display:block;font:600 16px/1.2 var(--font-mono)}
+.axis-note{font-size:12px;color:var(--muted);margin:6px 0 0}
+.linkbtn{appearance:none;background:none;border:0;color:var(--accent);font-weight:600;padding:8px 0 0;cursor:pointer;font-size:14px}
+.linkbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.tbl-wrap{overflow-x:auto;margin-top:8px}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+td.n,th.n{text-align:right}
+td.good{color:var(--good-text);font-weight:600}
+
+.bars{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+.bar-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:baseline}
+.bar-name{font-size:14px;font-weight:500;min-width:0}
+.bar-v{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar-v small{color:var(--muted);font-size:12px;font-weight:400;margin-left:8px}
+.bar-line{grid-column:1 / -1;height:12px}
+.bar{height:12px;background:var(--series);border-radius:0 4px 4px 0;min-width:4px}
+
+.futuro ul{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:72ch;color:var(--ink-2)}
+.futuro li b{color:var(--ink)}
+textarea{width:100%;min-height:120px;margin-top:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);padding:8px;font:12px/1.4 var(--font-mono)}
+.status{font-size:13px;color:var(--ink-2);margin:8px 0 0;min-height:1em}
+.foot{font-size:12px;color:var(--muted);text-align:center;margin:28px 0 0}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--tip-bg);color:var(--tip-ink);padding:10px 16px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px);z-index:30;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+</style>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><span class="logo">Raia</span><span class="tag">Protótipo · dados de exemplo</span></div>
+    <nav class="tabs" role="tablist" aria-label="Seções">
+      <button class="tab" id="t-treino" role="tab" aria-controls="p-treino" aria-selected="true" type="button">Treino</button>
+      <button class="tab" id="t-nadador" role="tab" aria-controls="p-nadador" aria-selected="false" type="button">Nadador</button>
+      <button class="tab" id="t-turma" role="tab" aria-controls="p-turma" aria-selected="false" type="button">Turma</button>
+    </nav>
+  </div>
+  <div class="rope" aria-hidden="true"></div>
+</header>
+
+<main class="wrap">
+  <section id="p-treino" class="panel" role="tabpanel" aria-labelledby="t-treino">
+    <div class="setbar">
+      <div class="field">
+        <span class="lbl" id="lbl-dist">Distância</span>
+        <div class="seg" role="radiogroup" aria-labelledby="lbl-dist">
+          <input type="radio" name="dist" id="dist-25" value="25"><label for="dist-25">25 m</label>
+          <input type="radio" name="dist" id="dist-50" value="50" checked><label for="dist-50">50 m</label>
+        </div>
+      </div>
+      <div class="field">
+        <span class="lbl" id="lbl-estilo">Estilo</span>
+        <div class="seg" role="radiogroup" aria-labelledby="lbl-estilo">
+          <input type="radio" name="estilo" id="est-crawl" value="crawl" checked><label for="est-crawl">Crawl</label>
+          <input type="radio" name="estilo" id="est-costas" value="costas"><label for="est-costas">Costas</label>
+          <input type="radio" name="estilo" id="est-peito" value="peito"><label for="est-peito">Peito</label>
+          <input type="radio" name="estilo" id="est-borboleta" value="borboleta"><label for="est-borboleta">Borboleta</label>
+        </div>
+      </div>
+      <label class="check" for="escalonada"><input type="checkbox" id="escalonada" checked> Saída a cada 5 s na mesma raia</label>
+    </div>
+    <p class="hint">Toque em <b>Largar</b> quando a raia sair. Quando cada nadador tocar a borda, toque no nome dele: o tempo vai direto para o histórico, sem caderno e sem planilha.</p>
+    <div id="lanes" class="lanes"></div>
+    <div class="card">
+      <div class="card-head">
+        <h3>Tempos de hoje <span class="sub" id="sess-count"></span></h3>
+        <button class="btn small ghost" id="limpar" type="button">Apagar tempos de hoje</button>
+      </div>
+      <ol class="sess" id="sess-list"></ol>
+    </div>
+  </section>
+
+  <section id="p-nadador" class="panel" role="tabpanel" aria-labelledby="t-nadador" hidden>
+    <div class="pick">
+      <label class="lbl" for="sel-nadador">Nadador</label>
+      <select id="sel-nadador"></select>
+      <span class="sub">Os tempos marcados na aba Treino entram aqui na hora.</span>
+    </div>
+    <div class="who-head" id="nad-head"></div>
+    <div class="tiles" id="nad-tiles"></div>
+    <div class="charts" id="nad-charts"></div>
+  </section>
+
+  <section id="p-turma" class="panel" role="tabpanel" aria-labelledby="t-turma" hidden>
+    <div class="tiles" id="turma-tiles"></div>
+    <div class="card">
+      <h3>Quem mais evoluiu nos 50 m crawl</h3>
+      <p class="sub">Do primeiro tempo registrado até o melhor tempo de cada um.</p>
+      <div class="bars" id="bars"></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <h3>Turma</h3>
+        <button class="btn small" id="copiar" type="button">Copiar para o Excel</button>
+      </div>
+      <div class="tbl-wrap"><table id="tbl"></table></div>
+      <p class="status" id="copy-msg" role="status"></p>
+      <textarea id="copy-fallback" aria-label="Dados da turma para copiar" readonly hidden></textarea>
+    </div>
+    <div class="card futuro">
+      <h3>Como fica no app de verdade</h3>
+      <ul>
+        <li><b>Funciona sem internet na piscina.</b> Os tempos ficam guardados no aparelho e sobem sozinhos quando ele pegar Wi-Fi.</li>
+        <li><b>Vários professores ao mesmo tempo.</b> Cada um marca no próprio celular ou tablet, e tudo cai no mesmo histórico.</li>
+        <li><b>O caderno entra no sistema.</b> As planilhas antigas são importadas, e a evolução de cada nadador começa no primeiro dia dele no projeto.</li>
+        <li><b>Cada nadador vê a própria evolução</b> no celular, com login, e só a dele.</li>
+        <li><b>Tudo sai em planilha</b>, pronto para análise estatística.</li>
+      </ul>
+    </div>
+  </section>
+
+  <p class="foot">Protótipo Raia. Todos os nomes e tempos são fictícios, gerados só para demonstração.</p>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- utilidades ---------- */
+const $ = (sel, root) => (root || document).querySelector(sel);
+const pad = n => String(n).padStart(2, '0');
+const isoLocal = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const HOJE = isoLocal(new Date());
+const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+const DIAS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+const ESTILOS = ['crawl', 'costas', 'peito', 'borboleta'];
+const MENOS = '−';
+
+function fmt(s) {
+  if (s == null || !isFinite(s)) return '–';
+  const cs = Math.round(s * 100);
+  const m = Math.floor(cs / 6000), r = cs - m * 6000;
+  const sec = Math.floor(r / 100), c = pad(r % 100);
+  return m ? `${m}:${pad(sec)},${c}` : `${sec},${c}`;
+}
+const fmtDelta = d => (d > 0 ? '+' : MENOS) + fmt(Math.abs(d));
+const dataCurta = iso => { const p = iso.split('-'); return `${+p[2]} ${MESES[+p[1] - 1]}`; };
+const mesAno = iso => { const p = iso.split('-'); return `${MESES[+p[1] - 1]}/${p[0]}`; };
+const diaSemana = iso => DIAS[new Date(iso + 'T12:00:00').getDay()];
+const dec1 = x => x.toFixed(1).replace('.', ',');
+const dec2 = x => x.toFixed(2).replace('.', ',');
+const combo = (d, e) => `${d} m ${e}`;
+const hora = ts => { const d = new Date(ts); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  if (attrs) for (const k in attrs) {
+    const v = attrs[k];
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'text') el.textContent = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat()) {
+    if (c == null || c === false) continue;
+    el.append(c.nodeType ? c : document.createTextNode(String(c)));
+  }
+  return el;
+}
+const SVGNS = 'http://www.w3.org/2000/svg';
+function s(tag, attrs) {
+  const el = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  return el;
+}
+const store = {
+  get(k, def) { try { const v = localStorage.getItem(k); return v == null ? def : JSON.parse(v); } catch (e) { return def; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sem armazenamento: segue só na memória */ } }
+};
+
+/* ---------- dados fictícios (semente fixa: todo mundo vê os mesmos) ---------- */
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const rnd = mulberry32(20261003);
+const gauss = () => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+
+const NADADORES = [
+  { id: 'ana', nome: 'Ana L.', desde: '2026-03-03', b50: 54.8, g: .15, tau: 16, costas: true },
+  { id: 'bruno', nome: 'Bruno M.', desde: '2026-03-03', b50: 41.2, g: .07, tau: 20 },
+  { id: 'carla', nome: 'Carla S.', desde: '2026-03-10', b50: 47.5, g: .11, tau: 14, costas: true },
+  { id: 'diego', nome: 'Diego R.', desde: '2026-04-07', b50: 38.9, g: .05, tau: 18 },
+  { id: 'elisa', nome: 'Elisa P.', desde: '2026-03-05', b50: 58.6, g: .17, tau: 22 },
+  { id: 'felipe', nome: 'Felipe A.', desde: '2026-05-05', b50: 44.0, g: .09, tau: 10 },
+  { id: 'gabi', nome: 'Gabriela T.', desde: '2026-03-03', b50: 50.3, g: .12, tau: 18, costas: true },
+  { id: 'hugo', nome: 'Hugo N.', desde: '2026-06-02', b50: 62.5, g: .16, tau: 12 },
+  { id: 'isa', nome: 'Isabela C.', desde: '2026-03-12', b50: 45.8, g: .08, tau: 16 },
+  { id: 'joao', nome: 'João V.', desde: '2026-04-14', b50: 40.1, g: .04, tau: 25, costas: true },
+  { id: 'lari', nome: 'Larissa F.', desde: '2026-03-03', b50: 56.1, g: .13, tau: 20 },
+  { id: 'marcos', nome: 'Marcos D.', desde: '2026-07-07', b50: 49.0, g: .10, tau: 9, costas: true }
+];
+const BY = Object.fromEntries(NADADORES.map(n => [n.id, n]));
+
+const TREINOS = [];
+for (let d = new Date(2026, 2, 3); isoLocal(d) <= '2026-10-01'; d.setDate(d.getDate() + 1)) {
+  const w = d.getDay();
+  if (w === 2 || w === 4) TREINOS.push(isoLocal(d));
+}
+
+const HIST = [];
+for (const n of NADADORES) {
+  let k = 0;
+  for (const data of TREINOS) {
+    if (data < n.desde) continue;
+    if (k > 0 && rnd() > .78) continue;
+    const t50 = n.b50 * (1 - n.g * (1 - Math.exp(-k / n.tau))) + gauss() * 0.55;
+    const r = rnd();
+    const tem50 = k === 0 || r > .25, tem25 = k === 0 || r < .8;
+    if (tem50) HIST.push({ nad: n.id, data, dist: 50, estilo: 'crawl', t: Math.round(t50 * 100) / 100 });
+    if (tem25) HIST.push({ nad: n.id, data, dist: 25, estilo: 'crawl', t: Math.round((t50 * 0.462 + gauss() * 0.22) * 100) / 100 });
+    if (n.costas && rnd() < .3) HIST.push({ nad: n.id, data, dist: 25, estilo: 'costas', t: Math.round((t50 * 0.462 * 1.17 + gauss() * 0.3) * 100) / 100 });
+    k++;
+  }
+  n.presencas = k;
+  n.possiveis = TREINOS.filter(d => d >= n.desde).length;
+}
+
+/* tempos marcados neste aparelho (aba Treino) */
+let SESS = store.get('raia-tempos-v1', []);
+if (!Array.isArray(SESS)) SESS = [];
+SESS = SESS.filter(r => r && BY[r.nad] && typeof r.t === 'number' && r.id);
+const salvar = () => store.set('raia-tempos-v1', SESS);
+
+function registros(nad, dist, estilo) {
+  const out = [];
+  for (const r of HIST) if (r.nad === nad && r.dist === dist && r.estilo === estilo) out.push(r);
+  for (const r of SESS) if (r.nad === nad && r.dist === dist && r.estilo === estilo) out.push(r);
+  return out;
+}
+function melhor(nad, dist, estilo, semId) {
+  let b = null;
+  for (const r of registros(nad, dist, estilo)) if (r.id !== semId && (b == null || r.t < b)) b = r.t;
+  return b;
+}
+function porSessao(nad, dist, estilo) {
+  const m = new Map();
+  for (const r of registros(nad, dist, estilo)) {
+    const cur = m.get(r.data);
+    if (!cur || r.t < cur.t) m.set(r.data, { data: r.data, t: r.t, hoje: !!r.ts });
+  }
+  return [...m.values()].sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : 0));
+}
+const repsHoje = (nad, d, e) => SESS.filter(r => r.nad === nad && r.dist === d && r.estilo === e && r.data === HOJE).length;
+
+/* raias: os 3 mais rápidos nos 50 m crawl (histórico) na raia 1, e assim por diante */
+const melhorHist = id => Math.min(...HIST.filter(r => r.nad === id && r.dist === 50 && r.estilo === 'crawl').map(r => r.t));
+const ranking = NADADORES.slice().sort((a, b) => melhorHist(a.id) - melhorHist(b.id));
+ranking.forEach((n, i) => { n.raia = Math.floor(i / 3) + 1; });
+const RAIAS = [1, 2, 3, 4].map(k => ({ k, nads: ranking.filter(n => n.raia === k), t0: null, dist: 50, estilo: 'crawl', offs: {}, cheg: {}, el: {} }));
+
+/* ---------- avisos ---------- */
+let toastT = 0;
+function aviso(txt) {
+  const t = $('#toast');
+  t.textContent = txt; t.hidden = false;
+  clearTimeout(toastT);
+  toastT = setTimeout(() => { t.hidden = true; }, 2800);
+}
+
+/* ---------- aba Treino ---------- */
+const cfg = { dist: 50, estilo: 'crawl', escalonada: true };
+
+function estadoRaia(L) {
+  if (L.t0 == null) return 'parada';
+  return L.nads.every(n => L.cheg[n.id]) ? 'fim' : 'rodando';
+}
+
+function sparkline(pts) {
+  if (pts.length < 2) return null;
+  const W = 64, H = 22, p = 3;
+  const ts = pts.map(q => q.t);
+  const lo = Math.min(...ts), hi = Math.max(...ts), sp = (hi - lo) || 1;
+  const X = i => p + i * (W - 2 * p) / (pts.length - 1);
+  const Y = v => p + (hi - v) / sp * (H - 2 * p);
+  const svg = s('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, class: 'spark', 'aria-hidden': 'true' });
+  svg.append(s('polyline', { points: pts.map((q, i) => `${X(i).toFixed(1)},${Y(q.t).toFixed(1)}`).join(' '), style: 'fill:none;stroke:var(--series);stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round' }));
+  const l = pts.length - 1;
+  svg.append(s('circle', { cx: X(l).toFixed(1), cy: Y(pts[l].t).toFixed(1), r: 2.5, style: 'fill:var(--series)' }));
+  return svg;
+}
+
+function chipDelta(r) {
+  if (r.prev == null) return h('span', { class: 'chip neutral', text: 'primeiro tempo registrado' });
+  if (r.pb) return h('span', { class: 'chip pb', text: `★ Melhor tempo (${fmtDelta(r.t - r.prev)})` });
+  return h('span', { class: 'chip neutral', text: `${fmtDelta(r.t - r.prev)} do melhor` });
+}
+
+function montarRaias() {
+  const host = $('#lanes');
+  host.textContent = '';
+  for (const L of RAIAS) {
+    const clock = h('div', { class: 'lane-clock', text: '0,00' });
+    const what = h('div', { class: 'lane-what' });
+    const btn = h('button', { class: 'btn primary', type: 'button', onclick: () => acaoRaia(L) }, 'Largar');
+    const head = h('div', { class: 'lane-head' },
+      h('div', { class: 'lane-n', text: `Raia ${L.k}` }),
+      h('div', { class: 'lane-meta' }, clock, what),
+      btn);
+    const list = h('div', { class: 'swimmers' });
+    L.el = { clock, what, btn, cards: {} };
+    for (const n of L.nads) {
+      const rep = h('span', { class: 'sw-rep', hidden: true });
+      const best = h('span');
+      const spark = h('span');
+      const big = h('div', { class: 'sw-big', text: '–' });
+      const note = h('div', { class: 'sw-note' });
+      const card = h('button', { class: 'sw', type: 'button', 'data-st': 'espera', onclick: () => tocar(L, n) },
+        h('div', { class: 'sw-name' }, h('span', { text: n.nome }), rep),
+        big,
+        h('div', { class: 'sw-best' }, best, spark),
+        note);
+      L.el.cards[n.id] = { card, rep, best, spark, big, note };
+      list.append(card);
+    }
+    host.append(h('div', { class: 'lane' }, head, list));
+  }
+}
+
+function pintarRaia(L) {
+  const st = estadoRaia(L);
+  const d = st === 'parada' ? cfg.dist : L.dist;
+  const e = st === 'parada' ? cfg.estilo : L.estilo;
+  const { btn, what, clock } = L.el;
+  what.textContent = st === 'parada' ? `Próxima: ${combo(d, e)}` : `${combo(d, e)} · ${st === 'fim' ? 'todos chegaram' : 'nadando'}`;
+  btn.textContent = st === 'rodando' ? 'Cancelar' : st === 'fim' ? 'Largar de novo' : 'Largar';
+  btn.className = 'btn ' + (st === 'rodando' ? 'ghost' : 'primary');
+  if (st === 'parada') clock.textContent = '0,00';
+  for (const n of L.nads) {
+    const c = L.el.cards[n.id];
+    const b = melhor(n.id, d, e);
+    c.best.textContent = b == null ? 'sem tempo ainda' : `melhor ${fmt(b)}`;
+    c.spark.textContent = '';
+    const sp = sparkline(porSessao(n.id, d, e).slice(-8));
+    if (sp) c.spark.append(sp);
+    const reps = repsHoje(n.id, d, e);
+    c.rep.hidden = !reps;
+    c.rep.textContent = `${reps} hoje`;
+    const ch = L.cheg[n.id];
+    c.note.textContent = '';
+    if (ch) {
+      c.card.dataset.st = 'chegou';
+      c.big.textContent = fmt(ch.t);
+      c.note.append(chipDelta(ch));
+      c.card.setAttribute('aria-label', `${n.nome}: chegou em ${fmt(ch.t)}`);
+    } else if (st === 'parada') {
+      c.card.dataset.st = 'espera';
+      c.big.textContent = '–';
+      c.card.setAttribute('aria-label', `${n.nome}: esperando a largada da raia ${L.k}`);
+    } else {
+      c.card.setAttribute('aria-label', `Registrar a chegada de ${n.nome}`);
+    }
+  }
+}
+
+let wake = null;
+async function manterTelaAcesa() {
+  try {
+    if (!wake && navigator.wakeLock) {
+      wake = await navigator.wakeLock.request('screen');
+      wake.addEventListener('release', () => { wake = null; });
+    }
+  } catch (e) { /* aparelho recusou: segue sem */ }
+}
+
+function acaoRaia(L) {
+  if (estadoRaia(L) === 'rodando') {
+    L.t0 = null; L.cheg = {};
+    pintarRaia(L);
+    return;
+  }
+  L.dist = cfg.dist; L.estilo = cfg.estilo; L.cheg = {}; L.offs = {};
+  L.nads.forEach((n, i) => { L.offs[n.id] = cfg.escalonada ? i * 5000 : 0; });
+  L.t0 = performance.now();
+  pintarRaia(L);
+  manterTelaAcesa();
+  iniciarTick();
+}
+
+function tocar(L, n) {
+  const st = estadoRaia(L);
+  if (st === 'parada') { aviso(`Toque em Largar na raia ${L.k} primeiro.`); return; }
+  if (st !== 'rodando' || L.cheg[n.id]) return;
+  const t = (performance.now() - L.t0 - L.offs[n.id]) / 1000;
+  if (t < 0) { aviso(`${n.nome} ainda não saiu.`); return; }
+  if (t < 2) { aviso('Toque rápido demais (menos de 2 s). Marque quando o nadador tocar a borda.'); return; }
+  const tt = Math.round(t * 100) / 100;
+  const prev = melhor(n.id, L.dist, L.estilo);
+  const rec = {
+    id: 'r' + Date.now().toString(36) + Math.floor(Math.random() * 1e4),
+    nad: n.id, data: HOJE, dist: L.dist, estilo: L.estilo, t: tt,
+    rep: repsHoje(n.id, L.dist, L.estilo) + 1, ts: Date.now(), prev, pb: prev != null && tt < prev
+  };
+  SESS.push(rec);
+  salvar();
+  L.cheg[n.id] = rec;
+  try { if (navigator.vibrate) navigator.vibrate(rec.pb ? [30, 40, 30] : 25); } catch (e) { /* sem vibração */ }
+  pintarRaia(L);
+  listarSessao();
+  if (rec.pb) aviso(`★ Melhor tempo de ${n.nome} nos ${combo(rec.dist, rec.estilo)}: ${fmt(rec.t)}`);
+}
+
+let raf = 0;
+function tick() {
+  raf = 0;
+  const now = performance.now();
+  let algum = false;
+  for (const L of RAIAS) {
+    if (estadoRaia(L) !== 'rodando') continue;
+    algum = true;
+    L.el.clock.textContent = fmt((now - L.t0) / 1000);
+    for (const n of L.nads) {
+      if (L.cheg[n.id]) continue;
+      const c = L.el.cards[n.id];
+      const dt = (now - L.t0 - L.offs[n.id]) / 1000;
+      if (dt < 0) { c.card.dataset.st = 'aguarda'; c.big.textContent = `sai em ${Math.ceil(-dt)} s`; }
+      else { c.card.dataset.st = 'nadando'; c.big.textContent = fmt(dt); }
+    }
+  }
+  if (algum) raf = requestAnimationFrame(tick);
+}
+function iniciarTick() { if (!raf) raf = requestAnimationFrame(tick); }
+
+function listarSessao() {
+  const ol = $('#sess-list');
+  ol.textContent = '';
+  const hoje = SESS.filter(r => r.data === HOJE).sort((a, b) => b.ts - a.ts);
+  $('#sess-count').textContent = hoje.length ? `· ${hoje.length} ${hoje.length === 1 ? 'tempo' : 'tempos'}` : '';
+  $('#limpar').hidden = !hoje.length;
+  if (!hoje.length) {
+    ol.append(h('li', { class: 'vazio' }, h('p', { class: 'empty', text: 'Nenhum tempo marcado hoje. Largue uma raia e toque em cada nadador quando ele chegar.' })));
+    return;
+  }
+  for (const r of hoje) {
+    const n = BY[r.nad];
+    ol.append(h('li', null,
+      h('span', { class: 't', text: fmt(r.t) }),
+      h('div', { class: 'who' },
+        h('b', { text: n.nome }),
+        h('span', { class: 'meta', text: `${combo(r.dist, r.estilo)} · ${r.rep}ª repetição · ${hora(r.ts)}` }),
+        chipDelta(r)),
+      h('button', { class: 'btn small ghost', type: 'button', 'aria-label': `Desfazer o tempo ${fmt(r.t)} de ${n.nome}`, onclick: () => desfazer(r.id) }, 'Desfazer')));
+  }
+}
+
+function desfazer(id) {
+  const i = SESS.findIndex(r => r.id === id);
+  if (i < 0) return;
+  const r = SESS.splice(i, 1)[0];
+  salvar();
+  for (const L of RAIAS) {
+    if (L.cheg[r.nad] && L.cheg[r.nad].id === id) { delete L.cheg[r.nad]; if (L.t0 != null) iniciarTick(); }
+  }
+  RAIAS.forEach(pintarRaia);
+  listarSessao();
+  aviso('Tempo apagado.');
+}
+
+let armado = 0;
+$('#limpar').addEventListener('click', e => {
+  const b = e.currentTarget;
+  if (!armado) {
+    b.textContent = 'Toque de novo para apagar';
+    armado = setTimeout(() => { armado = 0; b.textContent = 'Apagar tempos de hoje'; }, 3000);
+    return;
+  }
+  clearTimeout(armado); armado = 0;
+  b.textContent = 'Apagar tempos de hoje';
+  SESS = SESS.filter(r => r.data !== HOJE);
+  salvar();
+  RAIAS.forEach(L => { L.t0 = null; L.cheg = {}; });
+  RAIAS.forEach(pintarRaia);
+  listarSessao();
+  aviso('Tempos de hoje apagados.');
+});
+
+document.querySelectorAll('input[name="dist"]').forEach(i => i.addEventListener('change', () => { cfg.dist = +i.value; RAIAS.forEach(pintarRaia); }));
+document.querySelectorAll('input[name="estilo"]').forEach(i => i.addEventListener('change', () => { cfg.estilo = i.value; RAIAS.forEach(pintarRaia); }));
+$('#escalonada').addEventListener('change', e => { cfg.escalonada = e.target.checked; });
+
+/* ---------- gráfico de evolução ---------- */
+function passo(raw) {
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const f = raw / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+}
+function rotuloY(v) {
+  if (v >= 60) return `${Math.floor(v / 60)}:${pad(Math.round(v % 60))}`;
+  return `${String(+v.toFixed(1)).replace('.', ',')} s`;
+}
+
+function grafico(host, pts, titulo) {
+  host.textContent = '';
+  const W = Math.max(260, Math.round(host.clientWidth || 600)), H = 230;
+  const m = { l: 46, r: 14, t: 28, b: 28 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const xs = pts.map(p => Date.parse(p.data + 'T12:00:00'));
+  let x0 = Math.min(...xs), x1 = Math.max(...xs);
+  if (x1 - x0 < 864e5 * 14) { const c = (x0 + x1) / 2; x0 = c - 864e5 * 7; x1 = c + 864e5 * 7; }
+  const ts = pts.map(p => p.t);
+  const lo = Math.min(...ts), hi = Math.max(...ts);
+  const span = Math.max(hi - lo, 0.8);
+  const step = passo(span / 4);
+  const y0 = Math.floor((lo - span * 0.22) / step) * step;
+  const y1 = Math.ceil((hi + span * 0.12) / step) * step;
+  const X = v => m.l + (v - x0) / (x1 - x0) * iw;
+  const Y = v => m.t + (y1 - v) / (y1 - y0) * ih;
+  const base = m.t + ih;
+  const first = pts[0], last = pts[pts.length - 1];
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'img',
+    'aria-label': `${titulo}: ${pts.length} treinos, de ${fmt(first.t)} no primeiro para ${fmt(last.t)} no último` });
+
+  const nT = Math.round((y1 - y0) / step);
+  for (let i = 0; i <= nT; i++) {
+    const v = y0 + i * step, y = Y(v);
+    svg.append(s('line', { x1: m.l, x2: W - m.r, y1: y.toFixed(1), y2: y.toFixed(1), style: `stroke:var(${i === 0 ? '--axis' : '--line'});stroke-width:1` }));
+    const tx = s('text', { x: m.l - 8, y: (y + 4).toFixed(1), 'text-anchor': 'end', style: 'fill:var(--muted);font-size:11px;font-family:var(--font-body)' });
+    tx.textContent = rotuloY(v);
+    svg.append(tx);
+  }
+
+  const meses = [];
+  for (let mm = new Date(new Date(x0).getFullYear(), new Date(x0).getMonth() + 1, 1); mm.getTime() <= x1; mm = new Date(mm.getFullYear(), mm.getMonth() + 1, 1)) meses.push(mm);
+  if (meses.length) {
+    const pulo = iw / meses.length < 34 ? 2 : 1;
+    meses.forEach((mm, i) => {
+      const x = X(mm.getTime());
+      svg.append(s('line', { x1: x.toFixed(1), x2: x.toFixed(1), y1: base, y2: base + 4, style: 'stroke:var(--axis);stroke-width:1' }));
+      if (i % pulo) return;
+      const tx = s('text', { x: x.toFixed(1), y: H - 6, 'text-anchor': 'middle', style: 'fill:var(--muted);font-size:11px;font-family:var(--font-body)' });
+      tx.textContent = MESES[mm.getMonth()];
+      svg.append(tx);
+    });
+  } else {
+    [[x0, 'start'], [x1, 'end']].forEach(([v, a]) => {
+      const tx = s('text', { x: X(v).toFixed(1), y: H - 6, 'text-anchor': a, style: 'fill:var(--muted);font-size:11px;font-family:var(--font-body)' });
+      tx.textContent = dataCurta(isoLocal(new Date(v)));
+      svg.append(tx);
+    });
+  }
+
+  const px = xs.map(X), py = pts.map(p => Y(p.t));
+  const linha = px.map((x, i) => `${x.toFixed(1)},${py[i].toFixed(1)}`).join(' L');
+  if (pts.length > 1) {
+    svg.append(s('path', { d: `M${px[0].toFixed(1)},${base} L${linha} L${px[px.length - 1].toFixed(1)},${base} Z`, style: 'fill:var(--series-soft);stroke:none' }));
+    svg.append(s('path', { d: `M${linha}`, style: 'fill:none;stroke:var(--series);stroke-width:2;stroke-linejoin:round;stroke-linecap:round' }));
+  }
+  if (pts.length <= 24) pts.forEach((p, i) => svg.append(s('circle', { cx: px[i].toFixed(1), cy: py[i].toFixed(1), r: 4, style: 'fill:var(--series);stroke:var(--surface);stroke-width:2' })));
+
+  let ib = 0;
+  pts.forEach((p, i) => { if (p.t < pts[ib].t) ib = i; });
+  const il = pts.length - 1;
+  const anc = x => (x > W - m.r - 50 ? 'end' : x < m.l + 50 ? 'start' : 'middle');
+  const rotulo = (x, y, txt) => {
+    const t = s('text', { x: x.toFixed(1), y: y.toFixed(1), 'text-anchor': anc(x), style: 'fill:var(--ink);font-size:12px;font-weight:600;font-family:var(--font-mono)' });
+    t.textContent = txt;
+    svg.append(t);
+  };
+  svg.append(s('circle', { cx: px[ib].toFixed(1), cy: py[ib].toFixed(1), r: 5.5, style: 'fill:var(--good);stroke:var(--surface);stroke-width:2' }));
+  if (ib === il) {
+    rotulo(px[il], py[il] - 12, `★ melhor ${fmt(last.t)}${last.hoje ? ' (hoje)' : ''}`);
+  } else {
+    const yb = py[ib] + 20 <= base - 2 ? py[ib] + 20 : py[ib] - 12;
+    rotulo(px[ib], yb, `★ melhor ${fmt(pts[ib].t)}`);
+    svg.append(s('circle', { cx: px[il].toFixed(1), cy: py[il].toFixed(1), r: 4.5, style: 'fill:var(--series);stroke:var(--surface);stroke-width:2' }));
+    rotulo(px[il], Math.max(14, py[il] - 12), `${fmt(last.t)}${last.hoje ? ' hoje' : ''}`);
+  }
+
+  const cruz = s('line', { y1: m.t, y2: base, style: 'stroke:var(--axis);stroke-width:1', visibility: 'hidden' });
+  const ponto = s('circle', { r: 5, style: 'fill:var(--series);stroke:var(--surface);stroke-width:2', visibility: 'hidden' });
+  const alvo = s('rect', { x: m.l, y: 0, width: iw, height: H, style: 'fill:transparent' });
+  svg.append(cruz, ponto, alvo);
+  const tip = h('div', { class: 'tip', hidden: true });
+  host.append(svg, tip);
+
+  let atual = il;
+  function mostrar(i) {
+    atual = i;
+    const sc = svg.getBoundingClientRect().width / W || 1;
+    cruz.setAttribute('x1', px[i]); cruz.setAttribute('x2', px[i]); cruz.setAttribute('visibility', 'visible');
+    ponto.setAttribute('cx', px[i]); ponto.setAttribute('cy', py[i]); ponto.setAttribute('visibility', 'visible');
+    tip.textContent = '';
+    tip.append(h('b', { text: fmt(pts[i].t) }), h('span', { text: `${diaSemana(pts[i].data)}, ${dataCurta(pts[i].data)}${pts[i].hoje ? ' · hoje' : ''}${i === ib ? ' · melhor' : ''}` }));
+    tip.hidden = false;
+    const tw = tip.offsetWidth, cw = host.clientWidth;
+    let left = px[i] * sc + 12;
+    if (left + tw > cw) left = px[i] * sc - tw - 12;
+    tip.style.left = Math.max(0, left) + 'px';
+    tip.style.top = (m.t * sc) + 'px';
+  }
+  function esconder() {
+    cruz.setAttribute('visibility', 'hidden');
+    ponto.setAttribute('visibility', 'hidden');
+    tip.hidden = true;
+  }
+  function maisPerto(clientX) {
+    const r = svg.getBoundingClientRect();
+    const x = (clientX - r.left) * (W / r.width);
+    let b = 0, bd = Infinity;
+    px.forEach((v, i) => { const d = Math.abs(v - x); if (d < bd) { bd = d; b = i; } });
+    return b;
+  }
+  alvo.addEventListener('pointermove', e => mostrar(maisPerto(e.clientX)));
+  alvo.addEventListener('pointerdown', e => mostrar(maisPerto(e.clientX)));
+  svg.addEventListener('pointerleave', esconder);
+  host.tabIndex = 0;
+  host.onfocus = () => mostrar(atual);
+  host.onblur = esconder;
+  host.onkeydown = e => {
+    if (e.key === 'ArrowLeft') { mostrar(Math.max(0, atual - 1)); e.preventDefault(); }
+    else if (e.key === 'ArrowRight') { mostrar(Math.min(il, atual + 1)); e.preventDefault(); }
+    else if (e.key === 'Escape') esconder();
+  };
+}
+
+function tabelaTempos(ps) {
+  const ordenado = ps.slice().reverse();
+  const melhorT = Math.min(...ps.map(p => p.t));
+  return h('table', null,
+    h('thead', null, h('tr', null, h('th', { text: 'Treino' }), h('th', { class: 'n', text: 'Tempo' }))),
+    h('tbody', null, ordenado.map(p => h('tr', null,
+      h('td', { text: `${diaSemana(p.data)}, ${dataCurta(p.data)}${p.hoje ? ' (hoje)' : ''}` }),
+      h('td', { class: 'n' + (p.t === melhorT ? ' good' : ''), text: (p.t === melhorT ? '★ ' : '') + fmt(p.t) })))));
+}
+
+/* ---------- aba Nadador ---------- */
+const presenca = n => Math.round(n.presencas / n.possiveis * 100);
+function tile(l, v, d, cls) {
+  return h('div', { class: 'tile' }, h('span', { class: 'lbl', text: l }), h('span', { class: 'v' + (cls ? ' ' + cls : ''), text: v }), h('span', { class: 'd', text: d }));
+}
+
+let GRAFICOS = [];
+function desenharGraficos() { for (const g of GRAFICOS) grafico(g.host, g.pts, g.titulo); }
+
+function renderNadador() {
+  const sel = $('#sel-nadador');
+  const n = BY[sel.value] || NADADORES[0];
+  store.set('raia-nadador', n.id);
+  const head = $('#nad-head');
+  head.textContent = '';
+  head.append(h('h2', { text: n.nome }), h('p', { class: 'sub', text: `No projeto desde ${mesAno(n.desde)} · raia ${n.raia} · presença em ${presenca(n)}% dos treinos` }));
+
+  const combos = [];
+  const add = (d, e) => { if (!combos.some(c => c[0] === d && c[1] === e) && registros(n.id, d, e).length) combos.push([d, e]); };
+  add(50, 'crawl'); add(25, 'crawl');
+  for (const e of ESTILOS) { add(25, e); add(50, e); }
+
+  const tiles = $('#nad-tiles');
+  tiles.textContent = '';
+  if (combos.length) {
+    const [d, e] = combos[0];
+    const ps = porSessao(n.id, d, e);
+    const primeiro = ps[0], ult = ps[ps.length - 1];
+    const top = ps.reduce((a, b) => (b.t < a.t ? b : a));
+    tiles.append(tile(`Melhor · ${combo(d, e)}`, fmt(top.t), `${diaSemana(top.data)}, ${dataCurta(top.data)}${top.hoje ? ' (hoje)' : ''}`));
+    const dl = top.t - primeiro.t;
+    tiles.append(dl < 0
+      ? tile('Desde o primeiro treino', `↓ ${fmt(-dl)} s`, `${dec1(-dl / primeiro.t * 100)}% mais rápido que em ${dataCurta(primeiro.data)}`, 'good')
+      : tile('Desde o primeiro treino', '–', 'ainda sem melhora registrada'));
+    tiles.append(tile('Último treino', fmt(ult.t), `${diaSemana(ult.data)}, ${dataCurta(ult.data)}${ult.hoje ? ' (hoje)' : ''}`));
+    tiles.append(tile('Treinos com tempo', String(ps.length), `nos ${combo(d, e)}`));
+  }
+
+  const box = $('#nad-charts');
+  box.textContent = '';
+  GRAFICOS = [];
+  for (const [d, e] of combos) {
+    const ps = porSessao(n.id, d, e);
+    const b = Math.min(...ps.map(p => p.t));
+    const host = h('div', { class: 'chart' });
+    const tbl = h('div', { class: 'tbl-wrap', hidden: true });
+    const tog = h('button', { class: 'linkbtn', type: 'button', 'aria-expanded': 'false' }, 'Ver tabela');
+    tog.addEventListener('click', () => {
+      const abrir = tbl.hidden;
+      tbl.hidden = !abrir;
+      tog.setAttribute('aria-expanded', String(abrir));
+      tog.textContent = abrir ? 'Esconder tabela' : 'Ver tabela';
+      if (abrir && !tbl.firstChild) tbl.append(tabelaTempos(ps));
+    });
+    box.append(h('div', { class: 'card' },
+      h('h3', { text: combo(d, e) }),
+      h('p', { class: 'sub', text: `${ps.length} ${ps.length === 1 ? 'treino' : 'treinos'} · melhor ${fmt(b)} · primeiro ${fmt(ps[0].t)}` }),
+      host,
+      h('p', { class: 'axis-note', text: 'Melhor tempo de cada treino. Linha descendo quer dizer nadando mais rápido.' }),
+      tog, tbl));
+    GRAFICOS.push({ host, pts: ps, titulo: `${n.nome}, ${combo(d, e)}` });
+  }
+  desenharGraficos();
+}
+
+function montarSelect() {
+  const sel = $('#sel-nadador');
+  NADADORES.slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).forEach(n => sel.append(h('option', { value: n.id, text: n.nome })));
+  const salvo = store.get('raia-nadador', 'ana');
+  sel.value = BY[salvo] ? salvo : 'ana';
+  sel.addEventListener('change', renderNadador);
+}
+
+/* ---------- aba Turma ---------- */
+function linhasTurma() {
+  return NADADORES.slice().sort((a, b) => a.raia - b.raia || a.nome.localeCompare(b.nome, 'pt-BR')).map(n => {
+    const ps = porSessao(n.id, 50, 'crawl');
+    const primeiro = ps[0].t, top = Math.min(...ps.map(p => p.t));
+    return { n, primeiro, top, pct: (primeiro - top) / primeiro * 100 };
+  });
+}
+
+function renderTurma() {
+  const linhas = linhasTurma();
+  const tiles = $('#turma-tiles');
+  tiles.textContent = '';
+  const presMedia = Math.round(NADADORES.reduce((a, n) => a + n.presencas / n.possiveis, 0) / NADADORES.length * 100);
+  tiles.append(
+    tile('Nadadores', String(NADADORES.length), 'em 4 raias, terças e quintas'),
+    tile('Tempos registrados', (HIST.length + SESS.length).toLocaleString('pt-BR'), 'desde mar/2026'),
+    tile('Presença média', `${presMedia}%`, 'nos treinos desde a entrada de cada um'),
+    tile('Melhora média', `${dec1(linhas.reduce((a, x) => a + x.pct, 0) / linhas.length)}%`, 'nos 50 m crawl, do 1º tempo ao melhor'));
+
+  const evo = linhas.slice().sort((a, b) => b.pct - a.pct);
+  const max = Math.max(...evo.map(x => x.pct), 1);
+  const bars = $('#bars');
+  bars.textContent = '';
+  for (const x of evo) {
+    bars.append(h('div', { class: 'bar-row' },
+      h('span', { class: 'bar-name', text: x.n.nome }),
+      h('span', { class: 'bar-v' }, `${dec1(x.pct)}%`, h('small', { text: `${fmt(x.primeiro)} → ${fmt(x.top)}` })),
+      h('div', { class: 'bar-line', 'aria-hidden': 'true' }, h('div', { class: 'bar', style: `width:${(x.pct / max * 100).toFixed(1)}%` }))));
+  }
+
+  const tbl = $('#tbl');
+  tbl.textContent = '';
+  tbl.append(
+    h('thead', null, h('tr', null,
+      h('th', { text: 'Nadador' }), h('th', { class: 'n', text: 'Raia' }), h('th', { text: 'Desde' }), h('th', { class: 'n', text: 'Presença' }),
+      h('th', { class: 'n', text: '1º 50 m' }), h('th', { class: 'n', text: 'Melhor 50 m' }), h('th', { class: 'n', text: 'Melhora' }))),
+    h('tbody', null, linhas.map(x => h('tr', null,
+      h('td', { text: x.n.nome }), h('td', { class: 'n', text: String(x.n.raia) }), h('td', { text: mesAno(x.n.desde) }),
+      h('td', { class: 'n', text: `${presenca(x.n)}%` }), h('td', { class: 'n', text: fmt(x.primeiro) }),
+      h('td', { class: 'n', text: fmt(x.top) }), h('td', { class: 'n good', text: `↓ ${dec1(x.pct)}%` })))));
+}
+
+$('#copiar').addEventListener('click', () => {
+  const linhas = linhasTurma();
+  const tsv = ['Nadador\tRaia\tDesde\tPresença (%)\tPrimeiro 50 m crawl (s)\tMelhor 50 m crawl (s)\tMelhora (%)']
+    .concat(linhas.map(x => [x.n.nome, x.n.raia, mesAno(x.n.desde), presenca(x.n), dec2(x.primeiro), dec2(x.top), dec1(x.pct)].join('\t')))
+    .join('\n');
+  const msg = $('#copy-msg'), fb = $('#copy-fallback');
+  const falhou = () => {
+    fb.value = tsv; fb.hidden = false; fb.focus(); fb.select();
+    msg.textContent = 'Não deu para copiar direto. O texto abaixo já está selecionado: copie com Ctrl+C e cole no Excel.';
+  };
+  try {
+    navigator.clipboard.writeText(tsv).then(() => {
+      fb.hidden = true;
+      msg.textContent = 'Copiado. Abra o Excel e cole com Ctrl+V: cada coluna cai no lugar certo.';
+    }, falhou);
+  } catch (e) { falhou(); }
+});
+
+/* ---------- abas ---------- */
+const ABAS = ['treino', 'nadador', 'turma'];
+function abrir(id, foco) {
+  if (!ABAS.includes(id)) id = 'treino';
+  for (const a of ABAS) {
+    const on = a === id;
+    const b = $('#t-' + a);
+    b.setAttribute('aria-selected', String(on));
+    b.tabIndex = on ? 0 : -1;
+    $('#p-' + a).hidden = !on;
+  }
+  store.set('raia-aba', id);
+  if (id === 'nadador') renderNadador();
+  else if (id === 'turma') renderTurma();
+  else { RAIAS.forEach(pintarRaia); listarSessao(); }
+  if (foco) $('#t-' + id).focus();
+}
+ABAS.forEach((a, i) => {
+  const b = $('#t-' + a);
+  b.addEventListener('click', () => abrir(a));
+  b.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') { abrir(ABAS[(i + 1) % ABAS.length], true); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft') { abrir(ABAS[(i + ABAS.length - 1) % ABAS.length], true); e.preventDefault(); }
+  });
+});
+
+let rz = 0;
+window.addEventListener('resize', () => {
+  clearTimeout(rz);
+  rz = setTimeout(() => { if (!$('#p-nadador').hidden) desenharGraficos(); }, 150);
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && RAIAS.some(L => estadoRaia(L) === 'rodando')) manterTelaAcesa();
+});
+
+montarRaias();
+montarSelect();
+const inicio = (location.hash || '').slice(1);
+abrir(ABAS.includes(inicio) ? inicio : store.get('raia-aba', 'treino'));
+})();
+</script>
