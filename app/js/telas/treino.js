@@ -1,6 +1,6 @@
 // Tela de treino: o cronômetro de beira de piscina.
-// O professor larga a raia e toca no nome de cada nadador quando ele chega: o tempo já
-// fica gravado no aparelho, sem caderno e sem planilha.
+// Cada nadador tem o próprio cronômetro: LARGADA quando ele sai, PARAR quando ele chega.
+// O tempo fica gravado no aparelho na hora, sem caderno e sem planilha.
 
 import { h, aviso, fmtTempo, fmtDelta, combo, hoje, hora, dataLonga, ESTILOS, DISTANCIAS, porTreino, doCombo, melhorDe, naoEncontrado } from '../util.js';
 import * as db from '../db.js';
@@ -8,17 +8,16 @@ import { minigrafico } from '../grafico.js';
 import { abrirLancamento } from '../lancar.js';
 
 // Estado do cronômetro por turma. Fica na memória enquanto o app está aberto, então dá
-// para olhar outra tela e voltar sem perder uma raia que está nadando.
+// para olhar outra tela e voltar sem perder quem está nadando.
 const sessoes = new Map();
 function sessao(turmaId) {
-  if (!sessoes.has(turmaId)) sessoes.set(turmaId, { ausentes: new Set(), raias: new Map() });
+  if (!sessoes.has(turmaId)) sessoes.set(turmaId, { ausentes: new Set(), rodando: new Map(), ultimo: new Map(), pausa: new Map() });
   return sessoes.get(turmaId);
 }
-function estado(R) {
-  if (!R || R.t0 == null) return 'parada';
-  return R.membros.every(id => R.cheg[id]) ? 'fim' : 'rodando';
-}
-const algumaRodando = () => [...sessoes.values()].some(S => [...S.raias.values()].some(R => estado(R) === 'rodando'));
+const algumRodando = () => [...sessoes.values()].some(S => S.rodando.size > 0);
+
+const MINIMO_S = 2;      // menos que isso é toque sem querer
+const PAUSA_MS = 1000;   // depois do PARAR, a LARGADA fica travada um instante (evita toque duplo)
 
 /* tela sempre acesa enquanto alguém nada */
 let trava = null;
@@ -32,8 +31,6 @@ async function manterTelaAcesa() {
 }
 function liberarTela() { if (trava) { trava.release().catch(() => {}); trava = null; } }
 function vibrar(padrao) { try { if (navigator.vibrate) navigator.vibrate(padrao); } catch (e) { /* sem vibração */ } }
-
-const rotuloRaia = k => (k === 0 ? 'Sem raia' : `Raia ${k}`);
 
 function segmentado(nome, rotulo, opcoes, valor, aoMudar) {
   const idL = `lbl-${nome}`;
@@ -53,7 +50,7 @@ export async function render(caixa, turmaId) {
   if (!t || t.apagado) { caixa.append(naoEncontrado('Turma')); return; }
   const nads = await db.nadadoresDaTurma(turmaId);
   const tempos = await db.temposDaTurma(turmaId);
-  const cfg = { dist: 50, estilo: 'crawl', intervalo: 5, ...(await db.config.get('treino', {})) };
+  const cfg = { dist: 50, estilo: 'crawl', ...(await db.config.get('treino', {})) };
   const S = sessao(turmaId);
   const dHoje = hoje();
   const porId = new Map(nads.map(n => [n.id, n]));
@@ -63,23 +60,22 @@ export async function render(caixa, turmaId) {
     h('div', null, h('h2', { text: 'Treino' }), h('p', { class: 'sub', text: `${dataLonga(dHoje)} · ${t.nome}` })),
     nads.length ? h('div', { class: 'acoes' }, h('button', {
       class: 'btn', type: 'button',
-      onclick: () => abrirLancamento({ turmaId, nadadores: nads, dist: cfg.dist, estilo: cfg.estilo, aoSalvar: reg => { tempos.push(reg); montar(); listarSessao(); } })
+      onclick: () => abrirLancamento({ turmaId, nadadores: nads, dist: cfg.dist, estilo: cfg.estilo, aoSalvar: reg => { tempos.push(reg); pintarTodos(); listarSessao(); } })
     }, 'Lançar tempo à mão')) : null));
 
   if (!nads.length) {
     caixa.append(h('div', { class: 'card vazio' },
       h('h3', { text: 'Essa turma ainda não tem nadadores' }),
-      h('p', { text: 'Cadastre os nadadores e a raia de costume de cada um. Depois volte aqui para cronometrar.' }),
+      h('p', { text: 'Cadastre os nadadores da turma. Depois volte aqui para cronometrar.' }),
       h('a', { class: 'btn primario', href: `#/turma/${t.id}` }, 'Cadastrar nadadores')));
     return;
   }
 
-  /* ajustes da repetição */
-  const salvarCfg = () => db.config.set('treino', cfg);
+  /* distância e estilo da próxima largada */
+  const salvarCfg = () => db.config.set('treino', { dist: cfg.dist, estilo: cfg.estilo });
   caixa.append(h('div', { class: 'ajustes' },
-    segmentado('dist', 'Distância', DISTANCIAS.map(d => [d, `${d} m`]), cfg.dist, v => { cfg.dist = +v; salvarCfg(); montar(); }),
-    segmentado('estilo', 'Estilo', ESTILOS.map(e => [e, e[0].toUpperCase() + e.slice(1)]), cfg.estilo, v => { cfg.estilo = v; salvarCfg(); montar(); }),
-    segmentado('intervalo', 'Saída entre nadadores da raia', [[0, 'Juntos'], [5, '5 s'], [10, '10 s']], cfg.intervalo, v => { cfg.intervalo = +v; salvarCfg(); })));
+    segmentado('dist', 'Distância', DISTANCIAS.map(d => [d, `${d} m`]), cfg.dist, v => { cfg.dist = +v; salvarCfg(); pintarTodos(); }),
+    segmentado('estilo', 'Estilo', ESTILOS.map(e => [e, e[0].toUpperCase() + e.slice(1)]), cfg.estilo, v => { cfg.estilo = v; salvarCfg(); pintarTodos(); })));
 
   /* presença */
   const resumoPresenca = h('summary');
@@ -96,11 +92,14 @@ export async function render(caixa, turmaId) {
     listaPresenca.append(h('label', { for: `pres-${n.id}` }, cb, n.nome));
   }
   caixa.append(h('details', { class: 'card' }, resumoPresenca,
-    h('p', { class: 'sub', style: 'margin-top:8px', text: 'Desmarque quem faltou: a pessoa some das raias de hoje.' }), listaPresenca));
+    h('p', { class: 'sub', style: 'margin-top:8px', text: 'Desmarque quem faltou: a pessoa some da lista de hoje.' }), listaPresenca));
 
-  caixa.append(h('p', { class: 'dica' }, 'Toque em ', h('b', { text: 'Largar' }), ' quando a raia sair. Quando cada nadador tocar a borda, toque no nome dele: o tempo fica salvo neste aparelho na hora.'));
-  const gradeRaias = h('div', { class: 'raias' });
-  caixa.append(gradeRaias);
+  const btnTodos = h('button', { class: 'btn', type: 'button', onclick: largarTodos });
+  caixa.append(h('div', { class: 'barra-largada' },
+    h('p', { class: 'dica' }, 'Toque em ', h('b', { text: 'LARGADA' }), ' quando o nadador sair e em ', h('b', { text: 'PARAR' }), ' quando ele tocar a borda. O tempo fica salvo na hora.'),
+    btnTodos));
+  const grade = h('div', { class: 'atletas' });
+  caixa.append(grade);
 
   const listaSessao = h('ol', { class: 'lista sessao' });
   const contaSessao = h('span', { class: 'sub' });
@@ -108,19 +107,8 @@ export async function render(caixa, turmaId) {
     h('div', { class: 'card-head' }, h('h3', null, 'Tempos de hoje ', contaSessao)),
     listaSessao));
 
-  /* ---------- raias ---------- */
-  const els = new Map();
-
-  function grupos() {
-    const g = new Map();
-    for (const n of nads) {
-      if (S.ausentes.has(n.id)) continue;
-      const k = n.raia || 0;
-      if (!g.has(k)) g.set(k, []);
-      g.get(k).push(n);
-    }
-    return g;
-  }
+  /* ---------- cartões ---------- */
+  const cards = new Map();
   const temposDe = (id, d, e) => doCombo(tempos.filter(r => r.nadadorId === id), d, e);
 
   // Melhor tempo anterior a este registro (para dizer se foi recorde pessoal).
@@ -140,116 +128,117 @@ export async function render(caixa, turmaId) {
   }
 
   function montar() {
-    els.clear();
-    gradeRaias.textContent = '';
-    const g = grupos();
-    const chaves = new Set([...g.keys()]);
-    for (const [k, R] of S.raias) if (estado(R) !== 'parada') chaves.add(k);
-    const ordem = [...chaves].sort((a, b) => (a === 0) - (b === 0) || a - b);
-    for (const k of ordem) {
-      const R = S.raias.get(k);
-      const membros = estado(R) === 'parada' ? (g.get(k) || []).map(n => n.id) : R.membros;
-      if (!membros.length) continue;
-      const relogio = h('div', { class: 'relogio', text: '0,00' });
-      const oque = h('div', { class: 'raia-oque' });
-      const btn = h('button', { class: 'btn primario', type: 'button', onclick: () => acaoRaia(k) }, 'Largar');
-      const lista = h('div', { class: 'nadadores' });
-      const cards = new Map();
-      for (const id of membros) {
-        const n = porId.get(id);
-        const rep = h('span', { class: 'nad-rep', hidden: true });
-        const melhor = h('span');
-        const mini = h('span');
-        const grande = h('div', { class: 'nad-grande', text: '–' });
-        const nota = h('div', { class: 'nad-nota' });
-        const card = h('button', { class: 'nad', type: 'button', 'data-st': 'espera', onclick: () => tocar(k, id) },
-          h('div', { class: 'nad-nome' }, h('span', { text: n.nome }), rep),
-          grande,
-          h('div', { class: 'nad-melhor' }, melhor, mini),
-          nota);
-        cards.set(id, { card, rep, melhor, mini, grande, nota, nome: n.nome });
-        lista.append(card);
-      }
-      gradeRaias.append(h('div', { class: 'raia' },
-        h('div', { class: 'raia-topo' }, h('div', { class: 'raia-n', text: rotuloRaia(k) }), h('div', { class: 'raia-meta' }, relogio, oque), btn),
-        lista));
-      els.set(k, { relogio, oque, btn, cards });
-      pintarRaia(k);
+    cards.clear();
+    grade.textContent = '';
+    for (const n of nads) {
+      if (S.ausentes.has(n.id)) continue;
+      const rep = h('span', { class: 'nad-rep', hidden: true });
+      const melhor = h('span');
+      const mini = h('span');
+      const nota = h('div', { class: 'at-nota' });
+      const cancelar = h('button', { class: 'link', type: 'button', hidden: true, onclick: () => cancelarLargada(n.id) }, 'Cancelar largada');
+      const relogio = h('div', { class: 'at-relogio', 'aria-live': 'off' });
+      const botao = h('button', { class: 'btn-cron', type: 'button', onclick: () => tocar(n.id) });
+      const card = h('div', { class: 'atleta', 'data-st': 'pronto' },
+        h('div', { class: 'at-info' },
+          h('div', { class: 'at-nome' }, h('span', { text: n.nome }), rep),
+          h('div', { class: 'at-melhor' }, melhor, mini),
+          nota, cancelar),
+        h('div', { class: 'at-acao' }, relogio, botao));
+      cards.set(n.id, { card, rep, melhor, mini, nota, cancelar, relogio, botao, nome: n.nome });
+      grade.append(card);
     }
-    // presença: quem está numa raia nadando não pode ser desmarcado agora
-    const nadando = new Set();
-    for (const R of S.raias.values()) if (estado(R) === 'rodando') R.membros.forEach(id => nadando.add(id));
-    for (const [id, cb] of caixasPresenca) cb.disabled = nadando.has(id);
-    const presentes = nads.length - S.ausentes.size;
-    resumoPresenca.textContent = `Presença: ${presentes} de ${nads.length}`;
+    for (const [id, cb] of caixasPresenca) cb.disabled = S.rodando.has(id);
+    resumoPresenca.textContent = `Presença: ${nads.length - S.ausentes.size} de ${nads.length}`;
+    pintarTodos();
     iniciarTick();
   }
 
-  function pintarRaia(k) {
-    const R = S.raias.get(k), E = els.get(k);
-    if (!E) return;
-    const st = estado(R);
-    const d = st === 'parada' ? cfg.dist : R.dist;
-    const e = st === 'parada' ? cfg.estilo : R.estilo;
-    E.oque.textContent = st === 'parada' ? `Próxima: ${combo(d, e)}` : `${combo(d, e)} · ${st === 'fim' ? 'todos chegaram' : 'nadando'}`;
-    E.btn.textContent = st === 'rodando' ? 'Cancelar' : st === 'fim' ? 'Largar de novo' : 'Largar';
-    E.btn.className = 'btn ' + (st === 'rodando' ? 'fantasma' : 'primario');
-    if (st === 'parada') E.relogio.textContent = '0,00';
-    for (const [id, c] of E.cards) {
-      const seus = temposDe(id, d, e);
-      const m = melhorDe(seus);
-      c.melhor.textContent = m == null ? 'sem tempo ainda' : `melhor ${fmtTempo(m)}`;
-      c.mini.textContent = '';
-      const g = minigrafico(porTreino(seus).slice(-8));
-      if (g) c.mini.append(g);
-      const reps = seus.filter(r => r.data === dHoje).length;
-      c.rep.hidden = !reps;
-      c.rep.textContent = `${reps} hoje`;
-      const ch = R && R.cheg[id];
-      c.nota.textContent = '';
-      if (ch) {
-        c.card.dataset.st = 'chegou';
-        c.grande.textContent = fmtTempo(ch.t);
-        if (ch.id) c.nota.append(chip(ch));
-        c.card.setAttribute('aria-label', `${c.nome}: chegou em ${fmtTempo(ch.t)}`);
-      } else if (st === 'parada') {
-        c.card.dataset.st = 'espera';
-        c.grande.textContent = '–';
-        c.card.setAttribute('aria-label', `${c.nome}: esperando a largada da ${rotuloRaia(k).toLowerCase()}`);
-      } else {
-        c.card.setAttribute('aria-label', `Registrar a chegada de ${c.nome}`);
-      }
+  function pintar(id) {
+    const c = cards.get(id);
+    if (!c) return;
+    const R = S.rodando.get(id);
+    const d = R ? R.dist : cfg.dist, e = R ? R.estilo : cfg.estilo;
+    const seus = temposDe(id, d, e);
+    const m = melhorDe(seus);
+    c.melhor.textContent = m == null ? `sem tempo nos ${combo(d, e)}` : `melhor ${fmtTempo(m)}`;
+    c.mini.textContent = '';
+    const g = minigrafico(porTreino(seus).slice(-8));
+    if (g) c.mini.append(g);
+    const reps = seus.filter(r => r.data === dHoje).length;
+    c.rep.hidden = !reps;
+    c.rep.textContent = `${reps} hoje`;
+    c.nota.textContent = '';
+    if (R) {
+      c.card.dataset.st = 'nadando';
+      c.botao.textContent = 'PARAR';
+      c.botao.className = 'btn-cron parar';
+      c.botao.setAttribute('aria-label', `Parar o tempo de ${c.nome}`);
+      c.cancelar.hidden = false;
+      c.nota.append(h('span', { text: `nadando ${combo(R.dist, R.estilo)}` }));
+    } else {
+      const ult = S.ultimo.get(id);
+      c.card.dataset.st = ult ? 'chegou' : 'pronto';
+      c.botao.textContent = 'LARGADA';
+      c.botao.className = 'btn-cron largar';
+      c.botao.setAttribute('aria-label', `Largada de ${c.nome}`);
+      c.cancelar.hidden = true;
+      c.relogio.textContent = ult ? fmtTempo(ult.t) : '';
+      if (ult) c.nota.append(h('span', { text: `último: ${combo(ult.dist, ult.estilo)}` }), ult.id ? chip(ult) : null);
     }
+    c.botao.disabled = (S.pausa.get(id) || 0) > performance.now();
+  }
+  function pintarTodos() {
+    for (const id of cards.keys()) pintar(id);
+    const prontos = [...cards.keys()].filter(id => !S.rodando.has(id)).length;
+    btnTodos.textContent = `Largar todos (${prontos})`;
+    btnTodos.hidden = prontos < 2;
   }
 
-  function acaoRaia(k) {
-    const R = S.raias.get(k);
-    if (estado(R) === 'rodando') {
-      S.raias.delete(k);
-      montar();
+  function largar(id, t0) {
+    if ((S.pausa.get(id) || 0) > performance.now() || S.rodando.has(id)) return;
+    S.rodando.set(id, { t0, dist: cfg.dist, estilo: cfg.estilo });
+    const cb = caixasPresenca.get(id);
+    if (cb) cb.disabled = true;
+  }
+  function largarTodos() {
+    const t0 = performance.now();
+    for (const id of cards.keys()) largar(id, t0);
+    vibrar(20);
+    pintarTodos();
+    manterTelaAcesa();
+    iniciarTick();
+  }
+  function cancelarLargada(id) {
+    S.rodando.delete(id);
+    const cb = caixasPresenca.get(id);
+    if (cb) cb.disabled = false;
+    pintarTodos();
+    if (!algumRodando()) liberarTela();
+  }
+
+  async function tocar(id) {
+    const R = S.rodando.get(id);
+    if (!R) {
+      largar(id, performance.now());
+      vibrar(15);
+      pintarTodos();
+      manterTelaAcesa();
+      iniciarTick();
       return;
     }
-    const membros = (grupos().get(k) || []).map(n => n.id);
-    if (!membros.length) return;
-    const offs = {};
-    membros.forEach((id, i) => { offs[id] = i * cfg.intervalo * 1000; });
-    S.raias.set(k, { t0: performance.now(), dist: cfg.dist, estilo: cfg.estilo, membros, offs, cheg: {} });
-    montar();
-    manterTelaAcesa();
-  }
-
-  async function tocar(k, id) {
-    const R = S.raias.get(k);
-    const st = estado(R);
-    const nome = porId.get(id).nome;
-    if (st === 'parada') { aviso(`Toque em Largar na ${rotuloRaia(k).toLowerCase()} primeiro.`); return; }
-    if (st !== 'rodando' || R.cheg[id]) return;
-    const seg = (performance.now() - R.t0 - R.offs[id]) / 1000;
-    if (seg < 0) { aviso(`${nome} ainda não saiu.`); return; }
-    if (seg < 2) { aviso('Toque rápido demais (menos de 2 s). Marque quando o nadador tocar a borda.'); return; }
+    const agora = performance.now();
+    const seg = (agora - R.t0) / 1000;
+    if (seg < MINIMO_S) { aviso(`Toque rápido demais (menos de ${MINIMO_S} s). Toque em PARAR quando o nadador tocar a borda.`); return; }
     const tt = Math.round(seg * 100) / 100;
-    R.cheg[id] = { t: tt };          // marca na hora, antes de gravar, para não contar toque duplo
-    pintarRaia(k);
+    const nome = porId.get(id).nome;
+    S.rodando.delete(id);
+    S.pausa.set(id, agora + PAUSA_MS);
+    setTimeout(() => pintar(id), PAUSA_MS + 20);
+    S.ultimo.set(id, { t: tt, dist: R.dist, estilo: R.estilo });   // mostra na hora, antes de gravar
+    const cb = caixasPresenca.get(id);
+    if (cb) cb.disabled = false;
+    pintarTodos();
     const seus = temposDe(id, R.dist, R.estilo);
     const p = melhorDe(seus);
     try {
@@ -258,21 +247,22 @@ export async function render(caixa, turmaId) {
         rep: seus.filter(r => r.data === dHoje).length + 1
       });
       tempos.push(reg);
-      R.cheg[id] = reg;
+      S.ultimo.set(id, reg);
       const recorde = p != null && tt < p;
       vibrar(recorde ? [30, 40, 30] : 25);
-      pintarRaia(k);
+      pintar(id);
       listarSessao();
-      montarSeFim(k);
       if (recorde) aviso(`★ Melhor tempo de ${nome} nos ${combo(R.dist, R.estilo)}: ${fmtTempo(tt)}`);
     } catch (e) {
-      delete R.cheg[id];
-      pintarRaia(k);
-      aviso('Não consegui salvar esse tempo. Toque de novo.');
+      S.ultimo.delete(id);
+      S.pausa.delete(id);
+      S.rodando.set(id, R);          // volta a correr: o professor pode tocar PARAR de novo
+      pintarTodos();
+      iniciarTick();
+      aviso('Não consegui salvar esse tempo. Toque em PARAR de novo.');
     }
+    if (!algumRodando()) liberarTela();
   }
-  // Quando a raia inteira chegou, libera a presença de quem estava nela.
-  function montarSeFim(k) { if (estado(S.raias.get(k)) === 'fim') montar(); }
 
   /* ---------- relógio ---------- */
   let raf = 0;
@@ -280,29 +270,23 @@ export async function render(caixa, turmaId) {
     raf = 0;
     const agora = performance.now();
     let algum = false;
-    for (const [k, E] of els) {
-      const R = S.raias.get(k);
-      if (estado(R) !== 'rodando') continue;
+    for (const [id, R] of S.rodando) {
+      const c = cards.get(id);
+      if (!c) continue;
       algum = true;
-      E.relogio.textContent = fmtTempo((agora - R.t0) / 1000);
-      for (const [id, c] of E.cards) {
-        if (R.cheg[id]) continue;
-        const dt = (agora - R.t0 - R.offs[id]) / 1000;
-        if (dt < 0) { c.card.dataset.st = 'aguarda'; c.grande.textContent = `sai em ${Math.ceil(-dt)} s`; }
-        else { c.card.dataset.st = 'nadando'; c.grande.textContent = fmtTempo(dt); }
-      }
+      c.relogio.textContent = fmtTempo((agora - R.t0) / 1000);
     }
     if (algum) raf = requestAnimationFrame(tick);
   }
   function iniciarTick() { if (!raf) raf = requestAnimationFrame(tick); }
 
-  /* ---------- lista da sessão ---------- */
+  /* ---------- lista do dia ---------- */
   function listarSessao() {
     listaSessao.textContent = '';
     const doDia = tempos.filter(r => r.data === dHoje).sort((a, b) => (a.criadoEm < b.criadoEm ? 1 : -1));
     contaSessao.textContent = doDia.length ? `· ${doDia.length} ${doDia.length === 1 ? 'tempo' : 'tempos'}` : '';
     if (!doDia.length) {
-      listaSessao.append(h('li', { class: 'nada', text: 'Nenhum tempo hoje ainda. Largue uma raia e toque em cada nadador quando ele chegar.' }));
+      listaSessao.append(h('li', { class: 'nada', text: 'Nenhum tempo hoje ainda. Toque em LARGADA quando o primeiro nadador sair.' }));
       return;
     }
     for (const r of doDia) {
@@ -322,13 +306,13 @@ export async function render(caixa, turmaId) {
     const i = tempos.findIndex(r => r.id === id);
     if (i < 0) return;
     const r = tempos.splice(i, 1)[0];
-    for (const R of S.raias.values()) if (R.cheg[r.nadadorId] && R.cheg[r.nadadorId].id === id) delete R.cheg[r.nadadorId];
-    montar();
+    if (S.ultimo.get(r.nadadorId)?.id === id) S.ultimo.delete(r.nadadorId);
+    pintarTodos();
     listarSessao();
     aviso('Tempo apagado.');
   }
 
-  const aoVoltar = () => { if (document.visibilityState === 'visible' && algumaRodando()) manterTelaAcesa(); };
+  const aoVoltar = () => { if (document.visibilityState === 'visible' && algumRodando()) manterTelaAcesa(); };
   document.addEventListener('visibilitychange', aoVoltar);
 
   montar();
@@ -338,6 +322,6 @@ export async function render(caixa, turmaId) {
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
     document.removeEventListener('visibilitychange', aoVoltar);
-    if (!algumaRodando()) liberarTela();
+    if (!algumRodando()) liberarTela();
   };
 }

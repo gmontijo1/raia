@@ -113,11 +113,11 @@ export async function nadadoresDaTurma(turmaId, { incluirArquivados = false } = 
 }
 export const nadador = id => um('nadadores', id);
 export function salvarNadador(n) {
-  return gravar('nadadores', { id: novoId(), criadoEm: agoraISO(), arquivado: false, apagado: false, raia: null, ...n });
+  return gravar('nadadores', { id: novoId(), criadoEm: agoraISO(), arquivado: false, apagado: false, ...n });
 }
 export async function salvarNadadores(lista) {
   const agora = agoraISO();
-  const objs = lista.map(n => ({ id: novoId(), criadoEm: agora, atualizadoEm: agora, arquivado: false, apagado: false, raia: null, ...n }));
+  const objs = lista.map(n => ({ id: novoId(), criadoEm: agora, atualizadoEm: agora, arquivado: false, apagado: false, ...n }));
   await gravarVarios('nadadores', objs);
   return objs;
 }

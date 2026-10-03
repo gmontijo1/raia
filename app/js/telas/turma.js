@@ -5,16 +5,6 @@ import * as db from '../db.js';
 import { formTurma } from './inicio.js';
 import { abrirLancamento } from '../lancar.js';
 
-export const RAIAS = [1, 2, 3, 4, 5, 6, 7, 8];
-
-export function seletorRaia(id, valor) {
-  const sel = h('select', { id },
-    h('option', { value: '', text: 'Sem raia' }),
-    RAIAS.map(r => h('option', { value: r, text: `Raia ${r}` })));
-  sel.value = valor ? String(valor) : '';
-  return sel;
-}
-
 export async function render(caixa, turmaId) {
   const t = await db.turma(turmaId);
   if (!t || t.apagado) { caixa.append(naoEncontrado('Turma')); return; }
@@ -53,7 +43,7 @@ export async function render(caixa, turmaId) {
     lista.append(h('li', null, h('a', { class: 'item', href: `#/nadador/${n.id}` },
       h('b', { text: n.nome }),
       h('span', { class: 'lado', text: m50 == null ? '–' : fmtTempo(m50) }),
-      h('span', { class: 'sub', text: `${n.raia ? `Raia ${n.raia}` : 'Sem raia'} · ${seus.length} ${seus.length === 1 ? 'tempo' : 'tempos'}` }))));
+      h('span', { class: 'sub', text: `${seus.length} ${seus.length === 1 ? 'tempo registrado' : 'tempos registrados'}` }))));
   }
   caixa.append(h('div', { class: 'card' },
     h('div', { class: 'card-head' },
@@ -63,32 +53,28 @@ export async function render(caixa, turmaId) {
 
   /* cadastro */
   const nome = h('input', { id: 'nad-nome', type: 'text', maxlength: 60, autocomplete: 'off', placeholder: 'Nome do nadador' });
-  const raia = seletorRaia('nad-raia', null);
   const umSo = h('form', { class: 'form' },
     h('label', { class: 'campo', for: 'nad-nome' }, h('span', { class: 'lbl', text: 'Nome' }), nome),
-    h('label', { class: 'campo', for: 'nad-raia' }, h('span', { class: 'lbl', text: 'Raia de costume' }), raia),
     h('div', { class: 'acoes' }, h('button', { class: 'btn primario', type: 'submit' }, 'Adicionar')));
   umSo.addEventListener('submit', async e => {
     e.preventDefault();
     const n = nome.value.trim();
     if (!n) { nome.focus(); return; }
-    await db.salvarNadador({ turmaId, nome: n, raia: raia.value ? +raia.value : null });
+    await db.salvarNadador({ turmaId, nome: n });
     aviso(`${n} adicionado.`);
     await recarregar();
     document.getElementById('nad-nome')?.focus();
   });
 
   const nomes = h('textarea', { id: 'nad-varios', placeholder: 'Um nome por linha' });
-  const raiaV = seletorRaia('nad-varios-raia', null);
   const varios = h('form', { class: 'form' },
     h('label', { class: 'campo cheio', for: 'nad-varios' }, h('span', { class: 'lbl', text: 'Nomes' }), nomes, h('small', { text: 'Cole a lista da turma, um nome por linha.' })),
-    h('label', { class: 'campo', for: 'nad-varios-raia' }, h('span', { class: 'lbl', text: 'Raia para todos' }), raiaV),
     h('div', { class: 'acoes' }, h('button', { class: 'btn', type: 'submit' }, 'Adicionar todos')));
   varios.addEventListener('submit', async e => {
     e.preventDefault();
     const lst = nomes.value.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
     if (!lst.length) { nomes.focus(); return; }
-    await db.salvarNadadores(lst.map(n => ({ turmaId, nome: n.slice(0, 60), raia: raiaV.value ? +raiaV.value : null })));
+    await db.salvarNadadores(lst.map(n => ({ turmaId, nome: n.slice(0, 60) })));
     aviso(`${lst.length} ${lst.length === 1 ? 'nadador adicionado' : 'nadadores adicionados'}.`);
     recarregar();
   });

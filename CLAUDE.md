@@ -22,13 +22,18 @@ consegue ver a própria evolução.
 
 ## A ideia central
 
-**Marcar o tempo já é registrar o tempo.** O celular ou tablet do professor é o cronômetro: largou a
-raia, tocou no nome do nadador quando ele chegou, e o tempo vai para o histórico. Somem o caderno e a
-digitação no Excel.
+**Marcar o tempo já é registrar o tempo.** O celular ou tablet do professor é o cronômetro: cada
+nadador tem o próprio, com LARGADA quando ele sai e PARAR quando ele chega, e o tempo vai para o
+histórico. Somem o caderno e a digitação no Excel.
+
+**Decisão do GÊ (v0.2.0):** sem divisão por raias. A versão 0.1.0 agrupava por raia, com saída
+escalonada automática, e ficou confusa. Agora cada aluno tem o próprio botão, o que também resolve a
+saída escalonada (o professor toca LARGADA na hora em que cada um sai). Não voltar a organizar o
+treino por raias sem pedido dele.
 
 ## Estado atual
 
-- **Base do app v0.1.0 no ar:** https://gmontijo1.github.io/raia/ (ver "Base do app" e "Publicação").
+- **App v0.2.0 no ar:** https://gmontijo1.github.io/raia/ (ver "Base do app" e "Publicação").
 - **Protótipo v1, dados fictícios:** `prototipo/raia-natacao.html`, publicado como Artifact em
   https://claude.ai/artifact/UyJ5x3KDjp6NZPqbAydNPw (para atualizar, publicar de novo nessa URL).
 - **O caderno registra só o tempo de 25 m e de 50 m de cada aluno.** Fotos do caderno e a planilha do
@@ -36,13 +41,14 @@ digitação no Excel.
 - **Próximo passo:** validar a ideia com a coordenação do projeto de natação (perguntas em
   `privado/CONTEXTO.md`).
 
-## Base do app (v0.1.0) — pasta `app/`
+## Base do app — pasta `app/`
 
 App web instalável (PWA), **sem etapa de build**: HTML, CSS e JavaScript puros (módulos ES), abertos
 direto no navegador. Não usar bundler, npm ou TypeScript: o PC do GÊ não tem Node nem Python.
 
 - **Telas** (`app/js/telas/`): `inicio` (turmas), `turma` (nadadores, cadastro um a um ou vários de
-  uma vez), `treino` (cronômetro por raia, saída juntos/5 s/10 s, presença, desfazer), `nadador`
+  uma vez), `treino` (cartão por nadador com LARGADA/PARAR, "Largar todos", cancelar largada, trava de
+  1 s após o PARAR contra toque duplo, mínimo de 2 s por tempo, presença, desfazer), `nadador`
   (evolução por distância e estilo, tabela, apagar tempo, editar/arquivar) e `dados` (planilha CSV,
   cópia de segurança JSON, proteção do armazenamento).
 - **Dados** (`app/js/db.js`): IndexedDB no aparelho. Lojas `turmas`, `nadadores`, `tempos` e

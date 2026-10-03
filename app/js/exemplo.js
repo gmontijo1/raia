@@ -15,9 +15,9 @@ function sorteador(semente) {
 }
 
 const PESSOAS = [
-  ['Ana (exemplo)', 1, 41.0, .06], ['Bruno (exemplo)', 1, 43.5, .07], ['Carla (exemplo)', 1, 45.2, .08],
-  ['Diego (exemplo)', 2, 49.8, .11], ['Elisa (exemplo)', 2, 51.6, .12], ['Felipe (exemplo)', 2, 53.0, .10],
-  ['Gabriela (exemplo)', 3, 58.4, .15], ['Hugo (exemplo)', 3, 62.1, .16]
+  ['Ana (exemplo)', 41.0, .06], ['Bruno (exemplo)', 43.5, .07], ['Carla (exemplo)', 45.2, .08],
+  ['Diego (exemplo)', 49.8, .11], ['Elisa (exemplo)', 51.6, .12], ['Felipe (exemplo)', 53.0, .10],
+  ['Gabriela (exemplo)', 58.4, .15], ['Hugo (exemplo)', 62.1, .16]
 ];
 
 export async function criarTurmaExemplo() {
@@ -34,8 +34,8 @@ export async function criarTurmaExemplo() {
   }
 
   const nadadores = [], tempos = [];
-  for (const [nome, raia, base50, ganho] of PESSOAS) {
-    const n = { id: novoId(), turmaId: turma.id, nome, raia, arquivado: false, apagado: false, criadoEm: agora, atualizadoEm: agora };
+  for (const [nome, base50, ganho] of PESSOAS) {
+    const n = { id: novoId(), turmaId: turma.id, nome, arquivado: false, apagado: false, criadoEm: agora, atualizadoEm: agora };
     nadadores.push(n);
     let k = 0;
     for (const data of datas) {

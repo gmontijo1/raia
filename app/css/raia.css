@@ -1,6 +1,6 @@
 /* Raia — estilos do app.
    Layout: cabeçalho fixo com a faixa de "corda de raia"; conteúdo em coluna de até 1120px;
-   raias do cronômetro em grade (1 coluna no celular, 2 a partir de 760px). */
+   cartões do cronômetro em grade (1 coluna no celular, 2 a partir de 760px). */
 
 @font-face {
   font-family: "Big Shoulders Display";
@@ -42,6 +42,8 @@
   --good-soft: #e1f3e1;
   --danger: #b42b2b;
   --danger-soft: #fbe5e5;
+  --parar: #c62828;
+  --parar-ink: #ffffff;
   --series: #2a78d6;
   --series-soft: rgba(42, 120, 214, .10);
   --tip-bg: #0d1c26;
@@ -55,7 +57,7 @@
   :root {
     --bg: #0a1319; --surface: #111d25; --surface-2: #0e1920; --ink: #e8f1f4; --ink-2: #a6b8c2; --muted: #82949f;
     --line: #22333d; --axis: #3a4d57; --accent: #43b4d8; --accent-ink: #03161d; --rope: #f2b630; --rope-soft: #352b12;
-    --good: #0ca30c; --good-text: #0ca30c; --good-soft: #11301a; --danger: #f07a7a; --danger-soft: #3a1717;
+    --good: #0ca30c; --good-text: #0ca30c; --good-soft: #11301a; --danger: #f07a7a; --danger-soft: #3a1717; --parar: #d93636; --parar-ink: #ffffff;
     --series: #3987e5; --series-soft: rgba(57, 135, 229, .16); --tip-bg: #e8f1f4; --tip-ink: #0d1c26;
     color-scheme: dark;
   }
@@ -157,29 +159,29 @@ a.item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; bo
 .turma-card .nome { font: 800 26px/1.05 var(--font-display); letter-spacing: .04em; text-transform: uppercase; }
 .etiqueta { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
 
-/* ---------- cronômetro ---------- */
-.raias { display: grid; grid-template-columns: 1fr; gap: 14px; }
-@media (min-width: 760px) { .raias { grid-template-columns: 1fr 1fr; } }
-.raia { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
-.raia-topo { display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 14px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
-.raia-n { font: 800 26px/1 var(--font-display); letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
-.raia-meta { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
-.relogio { font: 600 22px/1.15 var(--font-mono); font-variant-numeric: tabular-nums; }
-.raia-oque { font-size: 12px; color: var(--muted); }
-.nadadores { display: flex; flex-direction: column; }
-.nad { appearance: none; border: 0; border-top: 1px solid var(--line); background: var(--surface); text-align: left; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 12px 14px; min-height: 76px; cursor: pointer; width: 100%; touch-action: manipulation; }
-.nad:first-child { border-top: 0; }
-.nad:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.nad-nome { font-weight: 600; font-size: 16px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; min-width: 0; }
+/* ---------- cronômetro: um cartão por nadador ---------- */
+.barra-largada { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.barra-largada .dica { flex: 1 1 260px; }
+.atletas { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 760px) { .atletas { grid-template-columns: 1fr 1fr; } }
+.atleta { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 12px 12px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; min-width: 0; }
+.atleta[data-st="nadando"] { background: var(--rope-soft); border-color: var(--rope); box-shadow: inset 5px 0 0 var(--rope); }
+.at-info { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
+.at-nome { font-weight: 600; font-size: 17px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; min-width: 0; }
+.at-melhor { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 10px; min-width: 0; }
+.at-nota { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; font-size: 12px; color: var(--ink-2); }
+.at-nota:empty { display: none; }
+.at-info .link { padding: 2px 0; font-size: 13px; }
+.at-acao { display: flex; flex-direction: column; align-items: stretch; gap: 6px; width: 132px; }
+.at-relogio { font: 600 26px/1 var(--font-mono); font-variant-numeric: tabular-nums; text-align: center; white-space: nowrap; }
+.at-relogio:empty { display: none; }
+.atleta[data-st="chegou"] .at-relogio { font-size: 20px; color: var(--ink-2); }
+.btn-cron { appearance: none; border: 0; border-radius: 12px; min-height: 58px; padding: 0 12px; font: 800 21px/1 var(--font-display); letter-spacing: .08em; cursor: pointer; touch-action: manipulation; }
+.btn-cron.largar { background: var(--accent); color: var(--accent-ink); }
+.btn-cron.parar { background: var(--parar); color: var(--parar-ink); }
+.btn-cron:disabled { opacity: .45; cursor: default; }
+.btn-cron:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
 .nad-rep { font-size: 11px; font-weight: 600; color: var(--ink-2); border: 1px solid var(--line); border-radius: 999px; padding: 0 7px; }
-.nad-melhor { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 10px; min-width: 0; }
-.nad-grande { grid-row: 1 / span 2; grid-column: 2; align-self: center; text-align: right; font: 600 26px/1 var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.nad-nota { grid-column: 1 / -1; }
-.nad-nota:empty { display: none; }
-.nad[data-st="espera"] .nad-grande { color: var(--axis); }
-.nad[data-st="aguarda"] { background: var(--surface-2); }
-.nad[data-st="aguarda"] .nad-grande { font-size: 16px; color: var(--ink-2); }
-.nad[data-st="nadando"] { background: var(--rope-soft); box-shadow: inset 4px 0 0 var(--rope); }
 .chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
 .chip.recorde { background: var(--good-soft); color: var(--good-text); }
 .chip.neutro { color: var(--ink-2); border: 1px solid var(--line); }

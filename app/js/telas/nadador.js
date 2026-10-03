@@ -4,7 +4,6 @@ import { h, aviso, fmtTempo, combo, dec1, dataCurta, dataLonga, mesAno, porTrein
 import * as db from '../db.js';
 import { graficoEvolucao } from '../grafico.js';
 import { abrirLancamento } from '../lancar.js';
-import { seletorRaia } from './turma.js';
 
 function bloco(rotulo, valor, detalhe, classe) {
   return h('div', { class: 'bloco' },
@@ -25,7 +24,7 @@ export async function render(caixa, nadadorId) {
     h('div', { class: 'cabeca' },
       h('div', null,
         h('h2', { text: n.nome }),
-        h('p', { class: 'sub', text: [n.raia ? `Raia ${n.raia}` : 'Sem raia', `cadastro em ${mesAno(n.criadoEm.slice(0, 10))}`, n.arquivado ? 'arquivado' : null].filter(Boolean).join(' · ') })),
+        h('p', { class: 'sub', text: [t ? t.nome : null, `cadastro em ${mesAno(n.criadoEm.slice(0, 10))}`, n.arquivado ? 'arquivado' : null].filter(Boolean).join(' · ') })),
       h('div', { class: 'acoes' }, n.arquivado ? null : h('button', { class: 'btn', type: 'button', onclick: lancar }, 'Lançar tempo à mão'))));
 
   const cs = combos(tempos);
@@ -79,16 +78,14 @@ export async function render(caixa, nadadorId) {
   /* cadastro */
   const nome = h('input', { id: 'ed-nome', type: 'text', maxlength: 60, autocomplete: 'off' });
   nome.value = n.nome;
-  const raia = seletorRaia('ed-raia', n.raia);
   const form = h('form', { class: 'form' },
     h('label', { class: 'campo', for: 'ed-nome' }, h('span', { class: 'lbl', text: 'Nome' }), nome),
-    h('label', { class: 'campo', for: 'ed-raia' }, h('span', { class: 'lbl', text: 'Raia de costume' }), raia),
     h('div', { class: 'acoes' }, h('button', { class: 'btn primario', type: 'submit' }, 'Salvar')));
   form.addEventListener('submit', async e => {
     e.preventDefault();
     const nv = nome.value.trim();
     if (!nv) { nome.focus(); return; }
-    await db.salvarNadador({ ...n, nome: nv, raia: raia.value ? +raia.value : null });
+    await db.salvarNadador({ ...n, nome: nv });
     aviso('Cadastro salvo.');
     recarregar();
   });
@@ -102,7 +99,7 @@ export async function render(caixa, nadadorId) {
   caixa.append(h('details', { class: 'card' }, h('summary', { text: 'Editar cadastro' }),
     h('div', { style: 'margin-top:12px' }, form),
     h('div', { class: 'acoes', style: 'margin-top:16px' }, arquivar,
-      h('span', { class: 'sub', text: 'Arquivar tira o nadador das raias, mas guarda o histórico.' }))));
+      h('span', { class: 'sub', text: 'Arquivar tira o nadador do treino, mas guarda o histórico.' }))));
 }
 
 function tabelaTempos(lista, melhor, recarregar) {
