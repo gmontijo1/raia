@@ -21,18 +21,18 @@
 - Comando completo, a partir da raiz do repositório:
   `bash .design-sync/preparar-pacote.sh && node .ds-sync/resync.mjs --config .design-sync/config.json --node-modules .ds-sync/node_modules --out ./ds-bundle [--remote .design-sync/.cache/remote-sync.json]`
 
-- **Logo do projeto só fica neste PC.** Ele tem o nome da instituição, e o repositório é público.
-  Por isso fica em `privado/marca/` (ignorado pelo git): `logo-completo.png` e `logo-simbolo.png`
-  (branco com transparência, extraídos de um print) e `marca.css`, que embute os dois como máscara
-  nas classes `.logo-projeto` e `.logo-projeto-simbolo`. O `preparar-pacote.sh` anexa esse CSS ao
-  pacote quando o arquivo existe. Sem ele, a sincronia sai sem logo.
+- **Logo do projeto** (desde a v0.5.0 está no app): `app/marca/logo-completo.png` e
+  `logo-simbolo.png`, branco com transparência, usados como máscara nas classes `.logo-projeto` e
+  `.logo-projeto-simbolo` do `raia.css`. O conversor não leva imagens, então o
+  `preparar-pacote.sh` anexa ao pacote as duas regras com o logo embutido em data URI.
+- **Desenhos do GÊ dentro do projeto** (`templates/`, `uploads/`): são dele, feitos no Claude
+  Design. A sincronia nunca apaga nada fora das pastas que ela mesma gera. A tela da v0.5.0 veio de
+  `templates/app-natacao-ufla/` (opção "2a").
 
 ## Riscos na próxima sincronia
 
-- Sincronizar de um PC sem `privado/marca/marca.css` envia um pacote sem logo, mas o `conventions.md`
-  continua citando `.logo-projeto`. Nesse caso, copie a pasta `privado/marca/` antes ou não sincronize.
 - O logo foi tirado de um print em baixa resolução (540×319). Se aparecer o arquivo original,
-  refaça os dois PNG e o `marca.css`.
+  troque os dois PNG em `app/marca/` (mesma proporção, ou ajuste o `aspect-ratio` no `raia.css`).
 
 - `conventions.md` cita classes e tokens à mão. Se `app/css/raia.css` renomear ou remover alguma
   classe, o guia fica errado. Antes de enviar, confira cada nome citado contra o `_ds_bundle.css`.

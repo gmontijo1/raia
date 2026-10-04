@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0a6c8c">
+<meta name="theme-color" content="#edf3f5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a1319" media="(prefers-color-scheme: dark)">
 <meta name="description" content="Cronômetro de beira de piscina e evolução de cada nadador.">
 <title>Raia</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -33,8 +34,8 @@
 <header class="topo">
   <div class="topo-in">
     <a class="marca" href="#/">Raia</a>
+    <span class="logo-projeto" role="img" aria-label="Logo do projeto"></span>
     <button id="sincronia" class="sincronia" type="button" hidden></button>
-    <nav class="nav" id="menu" aria-label="Menu"></nav>
   </div>
   <div class="corda" aria-hidden="true"></div>
 </header>
@@ -46,6 +47,7 @@
 <main id="tela" class="wrap">
   <noscript><p>O Raia precisa de JavaScript ligado no navegador.</p></noscript>
 </main>
+<nav class="nav-baixo" id="menu" aria-label="Menu" hidden></nav>
 <div id="aviso" class="toast" role="status" aria-live="polite" hidden></div>
 </body>
 </html>

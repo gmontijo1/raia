@@ -2,10 +2,12 @@
 
 Contexto para qualquer sessão do Claude que trabalhar neste repositório. Ler inteiro antes de mexer.
 
-> **Este repositório é público.** Nada de nomes de pessoas, da instituição parceira ou de histórias
-> internas em arquivo versionado (nem em mensagem de commit). O contexto completo (quem é quem, origem
-> do projeto, próximos contatos) está em `privado/CONTEXTO.md`, que só existe no PC do GÊ e o git
-> ignora. Se estiver nesse PC, ler esse arquivo também.
+> **Este repositório é público.** Nada de nomes de pessoas nem de histórias internas em arquivo
+> versionado (nem em mensagem de commit). Única exceção: o nome e o logo do projeto de natação que
+> usa o app, liberados pelo GÊ em 04/10/2026 e guardados só em `app/js/marca.js` e `app/marca/`.
+> O contexto completo (quem é quem, origem do projeto, próximos contatos) está em
+> `privado/CONTEXTO.md`, que só existe no PC do GÊ e o git ignora. Se estiver nesse PC, ler esse
+> arquivo também.
 
 ## Quem
 
@@ -33,7 +35,12 @@ treino por raias sem pedido dele.
 
 ## Estado atual
 
-- **App v0.4.0 no ar (com login):** https://gmontijo1.github.io/raia/ (ver "Base do app" e "Publicação").
+- **App v0.5.0 no ar (com login):** https://gmontijo1.github.io/raia/ (ver "Base do app" e "Publicação").
+- **Visual (v0.5.0, escolhido pelo GÊ no Claude Design, opção "2a"):** topo com RAIA à esquerda, o
+  logo do projeto no centro e a sincronização à direita; menu fixo embaixo (some com menos de 2
+  itens); entrada sem cartão, com o logo grande e a corda de raia; LARGADA/PARAR em Helvetica
+  (`--font-botao`, vira Arial no Android) com letras mais juntas; rodapé "Raia · <projeto>". O
+  design system do Claude Design é sincronizado deste repositório (ver `.design-sync/NOTES.md`).
 - **Protótipo v1, dados fictícios:** `prototipo/raia-natacao.html`, publicado como Artifact em
   https://claude.ai/artifact/UyJ5x3KDjp6NZPqbAydNPw (para atualizar, publicar de novo nessa URL).
 - **O caderno registra só o tempo de 25 m e de 50 m de cada aluno.** Fotos do caderno e a planilha do
@@ -121,12 +128,15 @@ para o site. Endereço: https://gmontijo1.github.io/raia/
 1. **Dado real de nadador nunca entra no repositório.** Nomes, tempos, fotos do caderno e planilhas
    reais ficam no banco do app ou na pasta local `privado/`, que o git ignora. No repositório, só
    código e dados fictícios.
-2. **Repositório público:** nenhum nome de pessoa real, instituição parceira ou história interna em
-   arquivo versionado ou mensagem de commit. Isso vai em `privado/CONTEXTO.md`.
+2. **Repositório público:** nenhum nome de pessoa real nem história interna em arquivo versionado
+   ou mensagem de commit. Isso vai em `privado/CONTEXTO.md`. O nome e o logo do projeto de natação
+   ficam só em `app/js/marca.js` e `app/marca/`; o resto do código usa `NOME_PROJETO`.
 3. **LGPD:** coletar o mínimo; cada nadador vê só os próprios dados; se houver menores de idade, os
    responsáveis precisam autorizar.
 4. **Pesquisa:** se os dados forem usados em pesquisa, o projeto precisa de aprovação do comitê de
    ética antes.
-5. **Sem marca de instituição** no app até o projeto ser formalizado com a coordenação.
+5. **Marca do projeto:** o GÊ decidiu em 04/10/2026 pôr o logo e o nome do projeto de natação no
+   app (v0.5.0). O logo veio de um print em baixa resolução (540×319); trocar pelo arquivo original
+   quando houver.
 6. **Commits feitos pelo Claude no PC do GÊ:** autor `gmontijo1` /
    `321594711+gmontijo1@users.noreply.github.com` (o `git config` local é de outro usuário).

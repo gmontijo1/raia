@@ -2,6 +2,16 @@
 
 import { h } from '../util.js';
 import { entrarComGoogle, resgatarCodigo, sair, perfil, explicar } from '../nuvem.js';
+import { NOME_PROJETO } from '../marca.js';
+
+// Topo das duas telas: logo grande, corda de raia e título (o cabeçalho do app fica escondido aqui).
+function topoEntrada(titulo, texto) {
+  return [
+    h('span', { class: 'logo-projeto', role: 'img', 'aria-label': NOME_PROJETO }),
+    h('div', { class: 'corda', 'aria-hidden': 'true' }),
+    h('div', { class: 'entrada-titulo' }, h('h2', { text: titulo }), h('p', { class: 'dica', text: texto }))
+  ];
+}
 
 export async function render(caixa) {
   const msg = h('p', { class: 'erro-campo', role: 'alert' });
@@ -13,10 +23,9 @@ export async function render(caixa) {
     try { await entrarComGoogle(); }
     catch (e) { msg.textContent = explicar(e); botao.disabled = false; }
   });
-  caixa.append(h('div', { class: 'card entrada' },
-    h('h2', { text: 'Entrar' }),
-    h('p', { class: 'dica', text: 'Use a sua conta Google. Na primeira vez, você vai digitar o código que recebeu do professor.' }),
-    botao, msg,
+  caixa.append(h('div', { class: 'entrada' },
+    ...topoEntrada('Entrar', 'Use a sua conta Google. Na primeira vez, você vai digitar o código que recebeu do professor.'),
+    h('div', { class: 'entrada-form' }, botao, msg),
     h('p', { class: 'sub', text: 'Alunos veem só os próprios treinos. Professores usam o cronômetro e veem a turma toda.' })));
 }
 
@@ -49,9 +58,8 @@ export async function renderCodigo(caixa) {
       botao.disabled = false;
     }
   });
-  caixa.append(h('div', { class: 'card entrada' },
-    h('h2', { text: 'Seu código' }),
-    h('p', { class: 'dica', text: 'Digite o código de 8 letras e números que você recebeu do professor (ou do coordenador). Ele liga a sua conta ao seu cadastro no projeto.' }),
+  caixa.append(h('div', { class: 'entrada' },
+    ...topoEntrada('Seu código', 'Digite o código de 8 letras e números que você recebeu do professor (ou do coordenador). Ele liga a sua conta ao seu cadastro no projeto.'),
     form,
     h('p', { class: 'sub' }, `Conta: ${(p && p.email) || ''} · `,
       h('button', { class: 'link', type: 'button', onclick: async () => { await sair(); location.replace(location.pathname + '#/entrar'); location.reload(); } }, 'Entrar com outra conta'))));

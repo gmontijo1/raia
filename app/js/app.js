@@ -21,6 +21,7 @@ import * as db from './db.js';
 import { criarTurmaExemplo } from './exemplo.js';
 import { nuvemLigada, sb, sessaoAtual, carregarPerfil, perfilGuardado, eMaster } from './nuvem.js';
 import { ligarSincronia, aoMudarEstado, sincronizar } from './sincronia.js';
+import { NOME_PROJETO } from './marca.js';
 
 const EQUIPE = [
   [/^#\/?$/, inicio.render, 'turmas'],
@@ -75,7 +76,7 @@ async function navegar() {
   });
 
   const caixa = h('div', { class: 'tela' });
-  $('#tela').replaceChildren(caixa);
+  $('#tela').replaceChildren(caixa, h('p', { class: 'rodape', text: `Raia · ${NOME_PROJETO}` }));
   let fim = null;
   try {
     fim = await render(caixa, ...m.slice(1));
@@ -93,10 +94,14 @@ async function navegar() {
 
 window.addEventListener('hashchange', navegar);
 
-/* ---------- menu e indicador de sincronização ---------- */
+/* ---------- menu (embaixo, ao alcance do polegar) e indicador de sincronização ---------- */
 function montarMenu() {
   const itens = MENU[chaveModo()] || [];
-  $('#menu').replaceChildren(...itens.map(([href, menu, rotulo]) => h('a', { href, 'data-menu': menu }, rotulo)));
+  const menu = $('#menu');
+  menu.replaceChildren(...itens.map(([href, id, rotulo]) => h('a', { href, 'data-menu': id }, rotulo)));
+  // Com um item só (aluno) ou nenhum (entrada), o menu não ajuda: some.
+  menu.hidden = itens.length < 2;
+  document.documentElement.classList.toggle('com-menu-baixo', !menu.hidden);
 }
 
 function montarSincronia() {
@@ -113,7 +118,7 @@ function montarSincronia() {
     };
     const [classe, texto] = textos[e.fase] || textos.parado;
     botao.dataset.fase = classe;
-    botao.textContent = texto;
+    botao.replaceChildren(h('span', { text: texto }));   // span: corta com "…" se não couber no topo
     botao.title = e.erro || (e.ultimaVez ? `Última sincronização: ${new Date(e.ultimaVez).toLocaleTimeString('pt-BR')}` : 'Toque para sincronizar agora');
   });
 }
@@ -170,6 +175,7 @@ async function iniciar() {
   registrarServiceWorker();
   try { modo = await descobrirModo(); } catch (e) { console.error(e); modo = 'visitante'; }
   document.documentElement.dataset.modo = modo;
+  $('.topo .logo-projeto').setAttribute('aria-label', NOME_PROJETO);
   montarMenu();
   if (modo === 'equipe') { montarSincronia(); ligarSincronia(); }
   if (nuvemLigada()) {

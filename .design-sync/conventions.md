@@ -2,7 +2,7 @@
 
 **Não existem componentes React.** O Raia é um app web sem etapa de build (HTML, CSS e JS puro), e `window.Raia` vem vazio de propósito. Monte as telas com elementos HTML comuns em JSX (`className`) usando as classes abaixo. Todas existem em `_ds_bundle.css`, que já chega pelo `styles.css`. Use uma classe existente sempre que ela resolver. Layout novo pode usar `style` com os tokens `var(--…)`; nunca escreva cor em hex.
 
-**Leia antes de estilizar:** `_ds_bundle.css` é o CSS real do app (cerca de 280 linhas, com seções comentadas: cabeçalho, estrutura, botões e campos, listas, cronômetro, painel do nadador, evolução, diálogo, conta e sincronização, agenda).
+**Leia antes de estilizar:** `_ds_bundle.css` é o CSS real do app (cerca de 310 linhas, com seções comentadas: cabeçalho e menu embaixo, estrutura, botões e campos, listas, cronômetro, painel do nadador, evolução, diálogo, conta e sincronização, agenda).
 
 **Tema:** claro por padrão, escuro automático por `prefers-color-scheme: dark`. Os nomes dos tokens são os mesmos nos dois temas; só o valor muda.
 
@@ -13,13 +13,14 @@
 - Marca: `--accent` (azul de piscina, ação principal) com `--accent-ink` por cima; `--rope` e `--rope-soft` (amarelo da corda de raia: nadador em andamento, avisos).
 - Estado: `--good`, `--good-text`, `--good-soft` (recorde, melhora); `--danger`, `--danger-soft` (erro, apagar); `--parar`, `--parar-ink` (só o botão PARAR).
 - Gráficos: `--series`, `--series-soft`; balão do gráfico `--tip-bg`, `--tip-ink`.
-- Fontes: `--font-display` (Big Shoulders Display 800, sempre em MAIÚSCULAS: títulos `h2`, marca, nome do nadador no painel, botões do cronômetro); `--font-body` (IBM Plex Sans 400–600); `--font-mono` (IBM Plex Mono 600, para todo tempo e número, com `font-variant-numeric: tabular-nums`).
+- Fontes: `--font-display` (Big Shoulders Display 800, sempre em MAIÚSCULAS: títulos `h2`, marca RAIA, nome do nadador no painel); `--font-botao` (Helvetica Neue / Helvetica / Arial, só nos botões LARGADA e PARAR, com `letter-spacing: -.02em`); `--font-body` (IBM Plex Sans 400–600); `--font-mono` (IBM Plex Mono 600, para todo tempo e número, com `font-variant-numeric: tabular-nums`).
 
 ## Classes
 
 | Família | Classes |
 |---|---|
-| Página | `topo` > `topo-in` (`marca`, `nav` com `a[aria-current="page"]`), `corda` (faixa de 5px da corda de raia sob o cabeçalho), `faixa` / `faixa erro` (aviso), `wrap` (coluna de até 1120px), `tela` (pilha com espaço 16px), `cabeca`, `voltar`, `rodape` |
+| Página | `topo` > `topo-in` (grade de 3 colunas: `marca` à esquerda, `logo-projeto` no centro, `sincronia` à direita), `corda` (faixa de 5px da corda de raia sob o cabeçalho), `nav-baixo` (menu fixo embaixo: `a` com `a[aria-current="page"]`; com ele, o `html` ganha a classe `com-menu-baixo`), `faixa` / `faixa erro` (aviso), `wrap` (coluna de até 1120px), `tela` (pilha com espaço 16px), `cabeca`, `voltar`, `rodape` ("Raia · nome do projeto", no fim de cada tela) |
+| Entrada | `entrada` (sem cartão: `logo-projeto` grande, `corda`, `entrada-titulo` com `h2` e `dica`, `entrada-form`); nela o `topo` fica escondido |
 | Cartões e texto | `card`, `card-head`, `lbl` (rótulo em maiúsculas), `sub`, `mut`, `dica`, `linha`, `vazio`, `etiqueta`, `chip recorde`, `chip neutro`, `mono` |
 | Ações | `btn` com `primario`, `fantasma`, `perigo`, `pequeno` ou `grande`; `link`; `acoes` (grupo de botões) |
 | Formulário | `form` (grade automática) com `campo` (label + input/select/textarea + `small`), `cheio` (ocupa a linha), `seg` (segmentado: `input type="radio"` seguido de `label`), `erro-campo`, `campo-codigo` |
@@ -30,7 +31,7 @@
 
 ## Logo do projeto
 
-`<span className="logo-projeto" role="img" aria-label="(nome do projeto)" />` mostra o logo completo (símbolo, nome e traço; largura padrão 160px). `<span className="logo-projeto-simbolo" role="img" aria-label="(nome do projeto)" />` mostra só o símbolo do nadador (64px), para espaços pequenos. O desenho é uma máscara e pinta com a cor do texto: use `color: var(--ink)` em fundo claro e `color: var(--accent-ink)` sobre `--accent`. Mude o tamanho só pela `width`, porque a proporção é fixa. Escreva o nome do projeto no `aria-label` como ele aparece no logo.
+`<span className="logo-projeto" role="img" aria-label="(nome do projeto)" />` mostra o logo completo (símbolo, nome e traço; largura padrão 160px). `<span className="logo-projeto-simbolo" role="img" aria-label="(nome do projeto)" />` mostra só o símbolo do nadador (64px), para espaços pequenos. O desenho é uma máscara e pinta com a cor do texto: use `color: var(--ink)` em fundo claro e `color: var(--accent-ink)` sobre `--accent`. No app, o topo usa o logo com 92px em `--ink` e a entrada usa até 260px em `--accent`. Mude o tamanho só pela `width`, porque a proporção é fixa. Escreva o nome do projeto no `aria-label` como ele aparece no logo.
 
 ## Regras da marca
 

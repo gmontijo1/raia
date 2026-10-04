@@ -11,14 +11,17 @@ rm -rf "$P"
 mkdir -p "$P/css" "$P/fontes"
 cp app/css/raia.css "$P/css/"
 cp app/fontes/*.woff2 "$P/fontes/"
-# Extras que não podem ir para o repositório público (ficam em privado/, ignorado pelo git):
-# privado/marca/marca.css traz o logo do projeto embutido, só para o Claude Design.
-if [ -f privado/marca/marca.css ]; then
-  cat privado/marca/marca.css >> "$P/css/raia.css"
-  echo "incluído privado/marca/marca.css (logo do projeto)"
-else
-  echo "aviso: privado/marca/marca.css não existe neste PC; o logo do projeto não vai no pacote"
-fi
+# O conversor só leva fontes, não imagens: o raia.css aponta o logo para ../marca/*.png,
+# que não existe no Claude Design. Aqui o logo vai embutido (data URI) por cima dessas regras.
+{
+  echo
+  echo '/* logo embutido para o Claude Design (o app usa os arquivos em marca/) */'
+  for nome in logo-completo:logo-projeto logo-simbolo:logo-projeto-simbolo; do
+    arq="app/marca/${nome%%:*}.png"; classe="${nome##*:}"
+    uri="data:image/png;base64,$(base64 -w0 "$arq")"
+    echo ".$classe { -webkit-mask-image: url(\"$uri\"); mask-image: url(\"$uri\"); }"
+  done
+} >> "$P/css/raia.css"
 printf '{"name":"raia","version":"%s","private":true,"main":"index.js"}\n' "$VERSAO" > "$P/package.json"
 echo 'export {};' > "$P/index.js"
-echo "pacote raia@$VERSAO pronto em $P"
+echo "pacote raia@$VERSAO pronto em $P (com o logo embutido)"

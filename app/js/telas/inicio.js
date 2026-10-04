@@ -5,13 +5,14 @@ import * as db from '../db.js';
 import { criarTurmaExemplo } from '../exemplo.js';
 import { DIAS_CURTOS, normalizar, textoAgenda, descricaoTurma } from '../agenda.js';
 import { nuvemLigada } from '../nuvem.js';
+import { NOME_PROJETO } from '../marca.js';
 
 export async function render(caixa) {
   const turmas = await db.listarTurmas();
   const temExemplo = turmas.some(t => t.exemplo);
 
   caixa.append(h('div', { class: 'cabeca' },
-    h('div', null, h('h2', { text: 'Turmas' }), h('p', { class: 'sub', text: 'Escolha a turma para começar o treino ou ver a evolução.' }))));
+    h('div', null, h('span', { class: 'lbl', text: NOME_PROJETO }), h('h2', { text: 'Turmas' }), h('p', { class: 'sub', text: 'Escolha a turma para começar o treino ou ver a evolução.' }))));
 
   const form = formTurma(async t => {
     const nova = await db.salvarTurma(t);

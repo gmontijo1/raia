@@ -51,6 +51,8 @@
   --font-display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
   --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* LARGAR e PARAR: fonte do próprio aparelho (no Android, Arial) */
+  --font-botao: "Helvetica Neue", Helvetica, Arial, sans-serif;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -80,14 +82,36 @@ h2 { font: 800 40px/1 var(--font-display); letter-spacing: .03em; text-transform
 h3 { font-size: 17px; font-weight: 600; }
 p { margin: 0; }
 
-/* ---------- cabeçalho ---------- */
+/* ---------- cabeçalho: RAIA à esquerda, logo do projeto no centro, sincronização à direita ---------- */
 .topo { position: sticky; top: 0; z-index: 20; background: var(--bg); padding-top: env(safe-area-inset-top, 0px); }
-.topo-in { max-width: 1120px; margin: 0 auto; padding: 10px 16px 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
-.marca { font: 800 30px/1 var(--font-display); letter-spacing: .07em; text-transform: uppercase; color: var(--ink); text-decoration: none; margin-right: auto; padding: 4px 0; }
-.nav { display: flex; gap: 2px; }
-.nav a { color: var(--ink-2); text-decoration: none; font-weight: 600; padding: 10px 12px 9px; border-bottom: 3px solid transparent; }
-.nav a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }
-.nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.topo-in { max-width: 1120px; margin: 0 auto; padding: 12px 16px 10px; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; }
+.marca { justify-self: start; font: 800 18px/1 var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); text-decoration: none; padding: 6px 0; }
+.marca:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.topo .logo-projeto { width: 92px; color: var(--ink); }
+.topo .sincronia { justify-self: end; }
+html[data-modo="visitante"] .topo, html[data-modo="sem-papel"] .topo { display: none; }
+
+/* logo do projeto: a imagem é uma máscara e pinta com a cor do texto (currentColor) */
+.logo-projeto, .logo-projeto-simbolo {
+  display: inline-block; flex: none; background-color: currentColor;
+  -webkit-mask-position: center; mask-position: center; -webkit-mask-size: contain; mask-size: contain;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+}
+.logo-projeto { width: 160px; aspect-ratio: 540 / 319; -webkit-mask-image: url(../marca/logo-completo.png); mask-image: url(../marca/logo-completo.png); }
+.logo-projeto-simbolo { width: 64px; aspect-ratio: 365 / 170; -webkit-mask-image: url(../marca/logo-simbolo.png); mask-image: url(../marca/logo-simbolo.png); }
+
+/* menu fixo embaixo (some quando tem menos de 2 itens) */
+.nav-baixo {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
+  background: var(--surface); border-top: 1px solid var(--line);
+  padding: 0 max(0px, calc((100% - 640px) / 2)) env(safe-area-inset-bottom, 0px);
+}
+.nav-baixo a { display: flex; align-items: center; justify-content: center; text-align: center; min-height: 60px; padding: 0 8px; margin-top: -1px; border-top: 3px solid transparent; font: 600 14px/1.2 var(--font-body); color: var(--ink-2); text-decoration: none; }
+.nav-baixo a[aria-current="page"] { color: var(--accent); border-top-color: var(--accent); }
+.nav-baixo a:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
+.com-menu-baixo .wrap { padding-bottom: calc(56px + 64px + env(safe-area-inset-bottom, 0px)); }
+.com-menu-baixo .toast { bottom: calc(16px + 64px + env(safe-area-inset-bottom, 0px)); }
 .corda { height: 5px; background: repeating-linear-gradient(90deg, var(--rope) 0 12px, var(--accent) 12px 24px, var(--surface) 24px 36px, var(--accent) 36px 48px); }
 .faixa { max-width: 1120px; margin: 10px auto 0; padding: 10px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: 14px; background: var(--rope-soft); border-radius: 10px; }
 .faixa.erro { background: var(--danger-soft); color: var(--ink); }
@@ -176,7 +200,7 @@ a.item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; bo
 .at-relogio { font: 600 26px/1 var(--font-mono); font-variant-numeric: tabular-nums; text-align: center; white-space: nowrap; }
 .at-relogio:empty { display: none; }
 .atleta[data-st="chegou"] .at-relogio { font-size: 20px; color: var(--ink-2); }
-.btn-cron { appearance: none; border: 0; border-radius: 12px; min-height: 58px; padding: 0 12px; font: 800 21px/1 var(--font-display); letter-spacing: .08em; cursor: pointer; touch-action: manipulation; }
+.btn-cron { appearance: none; border: 0; border-radius: 12px; min-height: 58px; padding: 0 12px; font: 800 21px/1 var(--font-botao); letter-spacing: -.02em; cursor: pointer; touch-action: manipulation; }
 .btn-cron.largar { background: var(--accent); color: var(--accent-ink); }
 .btn-cron.parar { background: var(--parar); color: var(--parar-ink); }
 .btn-cron:disabled { opacity: .45; cursor: default; }
@@ -253,8 +277,13 @@ dialog h3 { margin-bottom: 12px; }
 .sincronia[data-fase="erro"] { color: var(--danger); border-color: var(--danger); }
 .sincronia[data-fase="erro"]::before { background: var(--danger); }
 .sincronia:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sincronia { max-width: 100%; min-width: 0; }
+.sincronia span { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 
-.entrada { max-width: 440px; margin: 24px auto 0; display: flex; flex-direction: column; gap: 12px; padding: 24px; }
+.entrada { max-width: 440px; width: 100%; margin: clamp(16px, 10vh, 110px) auto 0; display: flex; flex-direction: column; gap: 24px; }
+.entrada .logo-projeto { width: min(260px, 72%); align-self: center; color: var(--accent); }
+.entrada .corda { border-radius: 3px; }
+.entrada-titulo { display: flex; flex-direction: column; gap: 6px; }
 .entrada-form { display: flex; flex-direction: column; gap: 8px; }
 .btn.grande { min-height: 52px; font-size: 16px; width: 100%; }
 .campo-codigo { min-height: 56px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 8px 14px; font: 600 26px/1 var(--font-mono); letter-spacing: .12em; text-align: center; text-transform: uppercase; width: 100%; }

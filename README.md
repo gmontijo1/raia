@@ -3,7 +3,7 @@
 Cronômetro de beira de piscina e acompanhamento da evolução de nadadores.
 
 **Use agora:** https://gmontijo1.github.io/raia/ (funciona no celular, no tablet e no computador; pode
-ser instalado na tela inicial). **Status:** versão 0.4.0, em teste. Entrada com conta Google e um
+ser instalado na tela inicial). **Status:** versão 0.5.0, em teste. Entrada com conta Google e um
 código de convite.
 
 ## A ideia
@@ -25,6 +25,7 @@ histórico, com um gráfico de evolução para cada um.
 - Evolução de cada nadador, lançamento de tempo à mão, planilha para o Excel e cópia de segurança.
 - Funciona sem internet na beira da piscina; os tempos sobem para a nuvem quando há conexão, e
   todos os professores veem o mesmo histórico.
+- Menu na parte de baixo da tela, ao alcance do polegar, e o logo do projeto de natação no topo.
 
 **Alunos**
 - Veem só os próprios dados: os treinos da semana (datas e treino planejado), a evolução, cada
