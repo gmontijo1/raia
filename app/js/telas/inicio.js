@@ -3,6 +3,8 @@
 import { h, aviso } from '../util.js';
 import * as db from '../db.js';
 import { criarTurmaExemplo } from '../exemplo.js';
+import { DIAS_CURTOS, normalizar, textoAgenda, descricaoTurma } from '../agenda.js';
+import { nuvemLigada } from '../nuvem.js';
 
 export async function render(caixa) {
   const turmas = await db.listarTurmas();
@@ -35,10 +37,10 @@ export async function render(caixa) {
   turmas.forEach((t, i) => {
     grade.append(h('a', { class: 'card turma-card', href: `#/turma/${t.id}` },
       h('span', { class: 'nome', text: t.nome }),
-      t.horario ? h('span', { class: 'sub', text: t.horario }) : null,
+      descricaoTurma(t) ? h('span', { class: 'sub', text: descricaoTurma(t) }) : null,
       h('span', { class: 'linha' },
         h('span', { class: 'mut', text: `${contas[i].length} ${contas[i].length === 1 ? 'nadador' : 'nadadores'}` }),
-        t.exemplo ? h('span', { class: 'etiqueta', text: 'exemplo' }) : null)));
+        t.exemplo ? h('span', { class: 'etiqueta', text: nuvemLigada() ? 'exemplo · só neste aparelho' : 'exemplo' }) : null)));
   });
   caixa.append(grade, cartaoNova);
   if (!temExemplo) caixa.append(h('p', { class: 'sub' }, 'Quer testar sem dados reais? ', botaoExemplo('link')));
@@ -56,19 +58,31 @@ function botaoExemplo(estilo = 'btn') {
   }, 'Carregar turma de exemplo');
 }
 
+// Nome, dias da semana e horário. A agenda vira as "datas de treino" que o aluno vê.
 export function formTurma(aoSalvar, atual) {
   const nome = h('input', { id: 'turma-nome', type: 'text', required: true, maxlength: 60, autocomplete: 'off', placeholder: 'Ex.: Recreativo manhã' });
-  const horario = h('input', { id: 'turma-horario', type: 'text', maxlength: 60, autocomplete: 'off', placeholder: 'Ex.: terças e quintas, 7h' });
-  if (atual) { nome.value = atual.nome || ''; horario.value = atual.horario || ''; }
+  const agenda = normalizar(atual && atual.agenda);
+  const hora = h('input', { id: 'turma-hora', type: 'time', step: 300 });
+  hora.value = (agenda[0] && agenda[0].hora) || '';
+  const dias = DIAS_CURTOS.map((rot, d) => {
+    const cb = h('input', { type: 'checkbox', id: `turma-dia-${d}`, value: d });
+    cb.checked = agenda.some(a => a.dia === d);
+    return { cb, el: h('label', { for: `turma-dia-${d}` }, cb, rot) };
+  });
+  if (atual) nome.value = atual.nome || '';
   const form = h('form', { class: 'form' },
     h('label', { class: 'campo', for: 'turma-nome' }, h('span', { class: 'lbl', text: 'Nome da turma' }), nome),
-    h('label', { class: 'campo', for: 'turma-horario' }, h('span', { class: 'lbl', text: 'Dias e horário (opcional)' }), horario),
+    h('div', { class: 'campo cheio' },
+      h('span', { class: 'lbl', text: 'Dias de treino' }),
+      h('div', { class: 'presenca dias' }, dias.map(x => x.el))),
+    h('label', { class: 'campo', for: 'turma-hora' }, h('span', { class: 'lbl', text: 'Horário' }), hora),
     h('div', { class: 'acoes' }, h('button', { class: 'btn primario', type: 'submit' }, atual ? 'Salvar' : 'Criar turma')));
   form.addEventListener('submit', async e => {
     e.preventDefault();
     const n = nome.value.trim();
     if (!n) { nome.focus(); return; }
-    await aoSalvar({ ...(atual || {}), nome: n, horario: horario.value.trim() });
+    const nova = dias.filter(x => x.cb.checked).map(x => ({ dia: +x.cb.value, hora: hora.value || '' }));
+    await aoSalvar({ ...(atual || {}), nome: n, agenda: nova, horario: textoAgenda(nova) || (nova.length ? '' : (atual && atual.horario) || '') });
   });
   return form;
 }

@@ -1,29 +1,39 @@
-// Banco local (IndexedDB). Tudo o que o app registra fica guardado no próprio aparelho.
+// Banco local (IndexedDB). Tudo o que o app registra fica guardado primeiro no próprio
+// aparelho; com a nuvem ligada, `sincronia.js` envia e recebe as mudanças.
 //
-// Já pensado para sincronizar com a nuvem depois:
+// Pensado para sincronizar:
 // - todo registro tem id gerado no aparelho (sem colisão entre aparelhos);
-// - nada é apagado de verdade: `apagado: true` (para a remoção também poder sincronizar);
-// - `atualizadoEm` em toda gravação e `sincronizado: false` nos tempos ainda não enviados.
+// - nada é apagado de verdade: `apagado: true` (para a remoção também sincronizar);
+// - `atualizadoEm` em toda gravação local decide quem ganha num conflito.
 
 import { novoId, agoraISO, porNome } from './util.js';
 
 const NOME = 'raia';
-const VERSAO = 1;
+const VERSAO = 2;
 let conexao = null;
+
+// Avisa o resto do app que algo foi gravado aqui (a sincronização escuta isso).
+const avisarMudanca = () => window.dispatchEvent(new CustomEvent('raia:mudou'));
 
 function abrir() {
   if (conexao) return conexao;
   conexao = new Promise((ok, falha) => {
     const req = indexedDB.open(NOME, VERSAO);
-    req.onupgradeneeded = () => {
+    req.onupgradeneeded = e => {
       const db = req.result;
-      db.createObjectStore('turmas', { keyPath: 'id' });
-      const nad = db.createObjectStore('nadadores', { keyPath: 'id' });
-      nad.createIndex('turmaId', 'turmaId');
-      const tempos = db.createObjectStore('tempos', { keyPath: 'id' });
-      tempos.createIndex('nadadorId', 'nadadorId');
-      tempos.createIndex('turmaId', 'turmaId');
-      db.createObjectStore('config');
+      if (e.oldVersion < 1) {
+        db.createObjectStore('turmas', { keyPath: 'id' });
+        const nad = db.createObjectStore('nadadores', { keyPath: 'id' });
+        nad.createIndex('turmaId', 'turmaId');
+        const tempos = db.createObjectStore('tempos', { keyPath: 'id' });
+        tempos.createIndex('nadadorId', 'nadadorId');
+        tempos.createIndex('turmaId', 'turmaId');
+        db.createObjectStore('config');
+      }
+      if (e.oldVersion < 2) {
+        const planos = db.createObjectStore('planos', { keyPath: 'id' });
+        planos.createIndex('turmaId', 'turmaId');
+      }
     };
     req.onsuccess = () => {
       const db = req.result;
@@ -57,6 +67,7 @@ async function gravar(nome, obj) {
   obj.atualizadoEm = agoraISO();
   const st = await loja(nome, 'readwrite');
   await pedido(st.put(obj));
+  avisarMudanca();
   return obj;
 }
 async function gravarVarios(nome, lista) {
@@ -119,7 +130,21 @@ export async function salvarNadadores(lista) {
   const agora = agoraISO();
   const objs = lista.map(n => ({ id: novoId(), criadoEm: agora, atualizadoEm: agora, arquivado: false, apagado: false, ...n }));
   await gravarVarios('nadadores', objs);
+  avisarMudanca();
   return objs;
+}
+
+/* ---------- treinos planejados (um por turma e data) ---------- */
+export async function planosDaTurma(turmaId) {
+  return (await todos('planos', 'turmaId', turmaId)).filter(p => !p.apagado);
+}
+// Texto vazio apaga o plano daquela data.
+export async function salvarPlano(turmaId, data, descricao) {
+  const existente = (await todos('planos', 'turmaId', turmaId)).find(p => p.data === data);
+  const texto = descricao.trim();
+  if (existente) return gravar('planos', { ...existente, descricao: texto || existente.descricao, apagado: !texto });
+  if (!texto) return null;
+  return gravar('planos', { id: novoId(), criadoEm: agoraISO(), turmaId, data, descricao: texto, apagado: false });
 }
 
 /* ---------- tempos ---------- */
@@ -151,35 +176,46 @@ export async function contagem() {
 }
 
 /* ---------- cópia de segurança ---------- */
+const LOJAS_DADOS = ['turmas', 'nadadores', 'tempos', 'planos'];
+
 export async function exportarTudo() {
-  const [turmas, nadadores, tempos] = await Promise.all([todos('turmas'), todos('nadadores'), todos('tempos')]);
-  return { app: 'raia', formato: 1, exportadoEm: agoraISO(), dispositivo: await dispositivoId(), turmas, nadadores, tempos };
+  const [turmas, nadadores, tempos, planos] = await Promise.all(LOJAS_DADOS.map(n => todos(n)));
+  return { app: 'raia', formato: 2, exportadoEm: agoraISO(), dispositivo: await dispositivoId(), turmas, nadadores, tempos, planos };
 }
 
-// Mescla um backup com o que já existe: fica a versão mais recente de cada registro.
+// Mescla registros com o que já existe: fica a versão mais recente de cada um (pelo
+// `atualizadoEm`). Usado pela cópia de segurança e pela sincronização com a nuvem.
+// Devolve quantos registros mudaram de verdade (a mesma versão de novo não conta).
+export async function mesclar(nome, registros) {
+  const atuais = new Map((await todos(nome)).map(o => [o.id, o]));
+  const novos = registros.filter(o => o && typeof o.id === 'string' &&
+    (!atuais.has(o.id) || String(o.atualizadoEm || '') > String(atuais.get(o.id).atualizadoEm || '')));
+  return gravarVarios(nome, novos);
+}
+
 export async function importarTudo(b) {
   if (!b || b.app !== 'raia' || !Array.isArray(b.turmas) || !Array.isArray(b.nadadores) || !Array.isArray(b.tempos)) {
     throw new Error('Esse arquivo não é uma cópia de segurança do Raia.');
   }
   let total = 0;
-  for (const nome of ['turmas', 'nadadores', 'tempos']) {
-    const atuais = new Map((await todos(nome)).map(o => [o.id, o]));
-    const novos = b[nome].filter(o => o && typeof o.id === 'string' &&
-      (!atuais.has(o.id) || String(o.atualizadoEm || '') > String(atuais.get(o.id).atualizadoEm || '')));
-    total += await gravarVarios(nome, novos);
-  }
+  for (const nome of LOJAS_DADOS) total += await mesclar(nome, b[nome] || []);
+  if (total) avisarMudanca();
   return total;
 }
 
+// Leitura crua de uma loja inteira (para a sincronização).
+export const todosDe = nome => todos(nome);
+
 // Só para a turma de exemplo: remove de vez (são dados inventados, não precisam de histórico).
 export async function apagarTurmaDeVez(turmaId) {
-  const [nads, temps] = await Promise.all([todos('nadadores', 'turmaId', turmaId), todos('tempos', 'turmaId', turmaId)]);
+  const [nads, temps, plans] = await Promise.all([todos('nadadores', 'turmaId', turmaId), todos('tempos', 'turmaId', turmaId), todos('planos', 'turmaId', turmaId)]);
   const db = await abrir();
   return new Promise((ok, falha) => {
-    const tx = db.transaction(['turmas', 'nadadores', 'tempos'], 'readwrite');
+    const tx = db.transaction(['turmas', 'nadadores', 'tempos', 'planos'], 'readwrite');
     tx.objectStore('turmas').delete(turmaId);
     nads.forEach(n => tx.objectStore('nadadores').delete(n.id));
     temps.forEach(t => tx.objectStore('tempos').delete(t.id));
+    plans.forEach(p => tx.objectStore('planos').delete(p.id));
     tx.oncomplete = () => ok();
     tx.onerror = () => falha(tx.error);
   });

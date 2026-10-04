@@ -1,8 +1,45 @@
 // Tela de dados: onde os tempos estão guardados, cópia de segurança e exportação para o Excel.
 
-import { h, aviso, fmtTempo, dec2, hoje } from '../util.js';
+import { h, aviso, fmtTempo, dec2, hoje, botaoConfirmar } from '../util.js';
 import * as db from '../db.js';
 import { VERSAO_APP } from '../versao.js';
+import { nuvemLigada, perfil, sair } from '../nuvem.js';
+import { sincronizar, aoMudarEstado, contarPendentes } from '../sincronia.js';
+
+const PAPEL = { master: 'master', professor: 'professor' };
+
+// Conta de quem entrou, situação da sincronização e botão de sair.
+function cartaoConta() {
+  const p = perfil();
+  const situacao = h('p', { class: 'sub' });
+  let confirmouPerda = false;
+  const parar = aoMudarEstado(e => {
+    const quando = e.ultimaVez ? ` Última vez: ${new Date(e.ultimaVez).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}.` : '';
+    situacao.textContent = {
+      enviando: 'Sincronizando agora…',
+      ok: e.pendentes ? `${e.pendentes} registros esperando para subir.${quando}` : `Tudo sincronizado com a nuvem.${quando}`,
+      offline: `Sem internet. ${e.pendentes ? `${e.pendentes} registros esperando para subir.` : 'Nada esperando.'}`,
+      erro: `Não deu para sincronizar: ${e.erro}`,
+      parado: 'Ainda não sincronizou nesta abertura do app.'
+    }[e.fase] || '';
+  });
+  const card = h('div', { class: 'card' },
+    h('h3', { text: 'Sua conta' }),
+    h('p', { class: 'dica', style: 'margin-top:6px', text: `${p.nome || p.email} · ${p.email && p.nome ? `${p.email} · ` : ''}${PAPEL[p.papel] || p.papel}` }),
+    situacao,
+    h('div', { class: 'acoes', style: 'margin-top:12px' },
+      h('button', { class: 'btn', type: 'button', onclick: () => sincronizar() }, 'Sincronizar agora'),
+      botaoConfirmar('Sair da conta', 'Toque de novo para sair', async () => {
+        const pend = await contarPendentes();
+        if (pend && !confirmouPerda) { confirmouPerda = true; aviso(`Atenção: ${pend} registros ainda não subiram. Conecte à internet ou toque em Sair de novo para sair mesmo assim.`); return; }
+        await sair();
+        location.replace(location.pathname + '#/entrar');
+        location.reload();
+      }, 'btn fantasma')));
+  // para de ouvir quando a tela sai
+  new MutationObserver((_, obs) => { if (!card.isConnected) { parar(); obs.disconnect(); } }).observe(document.getElementById('tela'), { childList: true });
+  return card;
+}
 
 function baixar(nomeArquivo, conteudo, tipo) {
   const url = URL.createObjectURL(new Blob([conteudo], { type: tipo }));
@@ -31,6 +68,8 @@ export async function render(caixa) {
 
   caixa.append(h('div', { class: 'cabeca' },
     h('div', null, h('h2', { text: 'Dados' }), h('p', { class: 'sub', text: 'Onde ficam os tempos, cópia de segurança e planilha.' }))));
+  const nuvem = nuvemLigada() && perfil();
+  if (nuvem) caixa.append(cartaoConta());
 
   const estadoProtecao = h('p', { class: 'sub' });
   const pintarProtecao = ok => {
@@ -43,7 +82,9 @@ export async function render(caixa) {
     h('h3', { text: 'Neste aparelho' }),
     h('p', { class: 'dica', style: 'margin-top:8px' },
       `${n.turmas} ${n.turmas === 1 ? 'turma' : 'turmas'}, ${n.nadadores} ${n.nadadores === 1 ? 'nadador' : 'nadadores'} e ${n.tempos} ${n.tempos === 1 ? 'tempo' : 'tempos'}. `,
-      'Por enquanto tudo fica guardado só neste aparelho, e funciona sem internet. A sincronização entre aparelhos vem numa próxima versão.'),
+      nuvem
+        ? 'Tudo é gravado primeiro neste aparelho (funciona sem internet) e sobe para a nuvem sozinho quando há conexão. A turma de exemplo fica só aqui.'
+        : 'Por enquanto tudo fica guardado só neste aparelho, e funciona sem internet.'),
     h('div', { class: 'acoes', style: 'margin-top:12px' },
       protegido ? null : h('button', {
         class: 'btn', type: 'button',
@@ -87,5 +128,5 @@ export async function render(caixa) {
       h('label', { class: 'btn fantasma', for: 'backup-arquivo', tabindex: 0, onkeydown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); arquivo.click(); } } }, 'Restaurar cópia'),
       arquivo, msgB)));
 
-  caixa.append(h('p', { class: 'rodape', text: `Raia versão ${VERSAO_APP} · protótipo em construção · nenhum dado sai deste aparelho` }));
+  caixa.append(h('p', { class: 'rodape', text: `Raia versão ${VERSAO_APP} · ${nuvem ? 'dados sincronizados com a nuvem' : 'nenhum dado sai deste aparelho'}` }));
 }

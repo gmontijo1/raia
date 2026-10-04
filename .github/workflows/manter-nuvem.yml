@@ -1,0 +1,30 @@
+# Visita diária ao banco do Supabase. No plano gratuito, o projeto "dorme" depois de
+# 7 dias sem uso; esta chamada simples (função ping) mantém ele acordado.
+# Lê o endereço e a chave PÚBLICA de app/js/config.js (a mesma que o app usa).
+name: Manter nuvem acordada
+
+on:
+  schedule:
+    - cron: '17 10 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Chamar a função ping do banco
+        run: |
+          URL=$(sed -n "s/.*url: *'\([^']*\)'.*/\1/p" app/js/config.js)
+          CHAVE=$(sed -n "s/.*chave: *'\([^']*\)'.*/\1/p" app/js/config.js)
+          if [ -z "$URL" ] || [ -z "$CHAVE" ]; then
+            echo "Nuvem ainda não configurada em app/js/config.js; nada a fazer."
+            exit 0
+          fi
+          RESPOSTA=$(curl -s -w ' %{http_code}' -X POST "$URL/rest/v1/rpc/ping" \
+            -H "apikey: $CHAVE" -H "Content-Type: application/json" -d '{}')
+          echo "Resposta: $RESPOSTA"
+          case "$RESPOSTA" in *" 200") exit 0 ;; *) exit 1 ;; esac
