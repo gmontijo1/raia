@@ -33,7 +33,7 @@ treino por raias sem pedido dele.
 
 ## Estado atual
 
-- **App v0.3.0 no ar:** https://gmontijo1.github.io/raia/ (ver "Base do app" e "Publicação").
+- **App v0.4.0 no ar (com login):** https://gmontijo1.github.io/raia/ (ver "Base do app" e "Publicação").
 - **Protótipo v1, dados fictícios:** `prototipo/raia-natacao.html`, publicado como Artifact em
   https://claude.ai/artifact/UyJ5x3KDjp6NZPqbAydNPw (para atualizar, publicar de novo nessa URL).
 - **O caderno registra só o tempo de 25 m e de 50 m de cada aluno.** Fotos do caderno e a planilha do
