@@ -3,7 +3,7 @@
 Cronômetro de beira de piscina e acompanhamento da evolução de nadadores.
 
 **Use agora:** https://gmontijo1.github.io/raia/ (funciona no celular, no tablet e no computador; pode
-ser instalado na tela inicial). **Status:** versão 0.5.0, em teste. Entrada com conta Google e um
+ser instalado na tela inicial). **Status:** versão 0.6.0, em teste. Entrada com conta Google e um
 código de convite.
 
 ## A ideia
@@ -22,6 +22,9 @@ histórico, com um gráfico de evolução para cada um.
   grupo, cancelar largada, presença do dia, desfazer.
 - Tocando no nome do nadador durante o treino: as repetições de hoje em tempo real (gráfico
   repetição por repetição, média, melhor do dia, quanto caiu ou subiu da 1ª para a última).
+- Encerrar o treino de cada nadador (os dados do dia vão para a nuvem na hora) ou da turma toda,
+  com um resumo do dia (repetições, recordes pessoais, melhor de cada um) para compartilhar no
+  grupo da turma.
 - Evolução de cada nadador, lançamento de tempo à mão, planilha para o Excel e cópia de segurança.
 - Funciona sem internet na beira da piscina; os tempos sobem para a nuvem quando há conexão, e
   todos os professores veem o mesmo histórico.

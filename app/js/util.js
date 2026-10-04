@@ -145,6 +145,23 @@ export function botaoConfirmar(rotulo, rotuloConfirma, acao, classe = 'btn peque
   return b;
 }
 
+// Pergunta com dois botões, que sobe da parte de baixo no celular. Resolve true (confirmou) ou false.
+export function perguntar({ titulo, texto, botao }) {
+  return new Promise(resolve => {
+    const dlg = h('dialog', { class: 'pergunta', 'aria-labelledby': 'pergunta-titulo' });
+    const fim = ok => { dlg.close(); dlg.remove(); resolve(ok); };
+    dlg.append(
+      h('h3', { id: 'pergunta-titulo', text: titulo }),
+      texto ? h('p', { class: 'sub', text: texto }) : null,
+      h('div', { class: 'acoes-coluna' },
+        h('button', { class: 'btn primario grande', type: 'button', onclick: () => fim(true) }, botao),
+        h('button', { class: 'btn grande fantasma', type: 'button', onclick: () => fim(false) }, 'Cancelar')));
+    dlg.addEventListener('cancel', e => { e.preventDefault(); fim(false); });
+    document.body.append(dlg);
+    dlg.showModal();
+  });
+}
+
 export function naoEncontrado(oque) {
   return h('div', { class: 'card vazio' },
     h('h3', { text: `${oque} não encontrado` }),

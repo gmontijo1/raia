@@ -2,12 +2,17 @@
 // Cada nadador tem o próprio cronômetro: LARGADA quando ele sai, PARAR quando ele chega.
 // O tempo fica gravado no aparelho na hora, sem caderno e sem planilha.
 // Tocar no nome abre o painel do nadador com as repetições de hoje, atualizado a cada PARAR.
+// "Encerrar treino" tira o nadador da lista de hoje e manda os dados dele para a nuvem na hora;
+// "Encerrar treino da turma" faz isso com todos e abre o resumo (telas/resumo.js).
 
-import { h, aviso, fmtTempo, fmtDelta, combo, combos, hoje, hora, dataLonga, ESTILOS, DISTANCIAS, porTreino, doCombo, melhorDe, naoEncontrado } from '../util.js';
+import { h, aviso, perguntar, fmtTempo, fmtDelta, combo, combos, hoje, hora, dataLonga, ESTILOS, DISTANCIAS, porTreino, doCombo, melhorDe, naoEncontrado } from '../util.js';
 import * as db from '../db.js';
 import { minigrafico } from '../grafico.js';
 import { abrirLancamento } from '../lancar.js';
 import { conteudoRepeticoes } from '../repeticoes.js';
+import { nuvemLigada } from '../nuvem.js';
+import { sincronizar, estadoSincronia, aoMudarEstado } from '../sincronia.js';
+import { doDia, repeticoes, statusNuvem } from '../resumo-dia.js';
 
 // Estado do cronômetro por turma. Fica na memória enquanto o app está aberto, então dá
 // para olhar outra tela e voltar sem perder quem está nadando.
@@ -56,6 +61,11 @@ export async function render(caixa, turmaId) {
   const S = sessao(turmaId);
   const dHoje = hoje();
   const porId = new Map(nads.map(n => [n.id, n]));
+  // Quem já encerrou o treino de hoje (guardado no aparelho; vale só para o dia).
+  const chaveEnc = `encerrados:${turmaId}`;
+  const guardados = await db.config.get(chaveEnc, null);
+  S.encerrados = new Set(guardados && guardados.data === dHoje ? guardados.ids : []);
+  const salvarEncerrados = () => db.config.set(chaveEnc, { data: dHoje, ids: [...S.encerrados] });
   const planoHoje = (await db.planosDaTurma(turmaId)).find(p => p.data === dHoje);
 
   caixa.append(h('div', null, h('a', { class: 'voltar', href: `#/turma/${t.id}` }, `← ${t.nome}`)));
@@ -63,7 +73,7 @@ export async function render(caixa, turmaId) {
     h('div', null, h('h2', { text: 'Treino' }), h('p', { class: 'sub', text: `${dataLonga(dHoje)} · ${t.nome}` })),
     nads.length ? h('div', { class: 'acoes' }, h('button', {
       class: 'btn', type: 'button',
-      onclick: () => abrirLancamento({ turmaId, nadadores: nads, dist: cfg.dist, estilo: cfg.estilo, aoSalvar: reg => { tempos.push(reg); pintarTodos(); listarSessao(); } })
+      onclick: () => abrirLancamento({ turmaId, nadadores: nads, dist: cfg.dist, estilo: cfg.estilo, aoSalvar: reg => { tempos.push(reg); pintarTodos(); listarSessao(); pintarEncerrados(); } })
     }, 'Lançar tempo à mão')) : null));
   if (planoHoje) caixa.append(h('div', { class: 'card plano' }, h('span', { class: 'lbl', text: 'Treino planejado para hoje' }), h('p', { class: 'plano-texto', text: planoHoje.descricao })));
 
@@ -105,6 +115,13 @@ export async function render(caixa, turmaId) {
   const grade = h('div', { class: 'atletas' });
   caixa.append(grade);
 
+  /* quem já encerrou, e o fim do treino da turma */
+  const listaEnc = h('div', { class: 'atletas' });
+  const secEnc = h('div', { class: 'encerrados', hidden: true }, h('span', { class: 'lbl', text: 'Treino encerrado' }), listaEnc);
+  const btnEncerrarTurma = h('button', { class: 'btn grande', type: 'button', onclick: encerrarTurma }, 'Encerrar treino da turma');
+  const btnResumo = h('a', { class: 'btn primario grande', href: `#/resumo/${turmaId}`, hidden: true }, 'Ver resumo do treino');
+  caixa.append(secEnc, btnEncerrarTurma, btnResumo);
+
   const listaSessao = h('ol', { class: 'lista sessao' });
   const contaSessao = h('span', { class: 'sub' });
   caixa.append(h('div', { class: 'card' },
@@ -135,12 +152,13 @@ export async function render(caixa, turmaId) {
     cards.clear();
     grade.textContent = '';
     for (const n of nads) {
-      if (S.ausentes.has(n.id)) continue;
+      if (S.ausentes.has(n.id) || S.encerrados.has(n.id)) continue;
       const rep = h('span', { class: 'nad-rep', hidden: true });
       const melhor = h('span');
       const mini = h('span');
       const nota = h('div', { class: 'at-nota' });
       const cancelar = h('button', { class: 'link', type: 'button', hidden: true, onclick: () => cancelarLargada(n.id) }, 'Cancelar largada');
+      const encerrar = h('button', { class: 'btn pequeno at-encerrar', type: 'button', onclick: () => encerrarNadador(n.id) }, 'Encerrar treino');
       const relogio = h('div', { class: 'at-relogio', 'aria-live': 'off' });
       const botao = h('button', { class: 'btn-cron', type: 'button', onclick: () => tocar(n.id) });
       const nomeBtn = h('button', { class: 'at-nome-btn', type: 'button', 'aria-label': `Ver as repetições de hoje de ${n.nome}`, onclick: () => abrirPainel(n.id) },
@@ -149,14 +167,15 @@ export async function render(caixa, turmaId) {
         h('div', { class: 'at-info' },
           h('div', { class: 'at-nome' }, nomeBtn, rep),
           h('div', { class: 'at-melhor' }, melhor, mini),
-          nota, cancelar),
+          nota, cancelar, encerrar),
         h('div', { class: 'at-acao' }, relogio, botao));
-      cards.set(n.id, { card, rep, melhor, mini, nota, cancelar, relogio, botao, nomeBtn, nome: n.nome });
+      cards.set(n.id, { card, rep, melhor, mini, nota, cancelar, encerrar, relogio, botao, nomeBtn, nome: n.nome });
       grade.append(card);
     }
     for (const [id, cb] of caixasPresenca) cb.disabled = S.rodando.has(id);
     resumoPresenca.textContent = `Presença: ${nads.length - S.ausentes.size} de ${nads.length}`;
     pintarTodos();
+    pintarEncerrados();
     iniciarTick();
   }
 
@@ -193,6 +212,7 @@ export async function render(caixa, turmaId) {
       if (ult) c.nota.append(h('span', { text: `último: ${combo(ult.dist, ult.estilo)}` }), ult.id ? chip(ult) : null);
     }
     c.botao.disabled = (S.pausa.get(id) || 0) > performance.now();
+    c.encerrar.disabled = !!R;
     if (painelId === id) desenharPainel();
   }
   function pintarTodos() {
@@ -335,6 +355,7 @@ export async function render(caixa, turmaId) {
         h('p', { class: 'at-nota', text: R ? `nadando ${combo(R.dist, R.estilo)}` : `próxima largada: ${combo(cfg.dist, cfg.estilo)}` }),
         R ? h('button', { class: 'link', type: 'button', onclick: () => cancelarLargada(id) }, 'Cancelar largada') : null),
       h('div', { class: 'at-acao' }, painelRelogio, botao));
+    const encerrarBtn = h('button', { class: 'btn grande', type: 'button', disabled: !!R, onclick: () => encerrarNadador(id) }, `Encerrar treino de ${n.nome}`);
 
     /* escolha de distância e estilo, se ele nadou mais de um hoje */
     const opcoes = combos(doDia).map(([d, e]) => chave(d, e));
@@ -363,7 +384,82 @@ export async function render(caixa, turmaId) {
     painel.textContent = '';
     painel.append(h('div', { class: 'painel-in' },
       h('div', { class: 'painel-topo' }, h('button', { class: 'link', type: 'button', onclick: fecharPainel }, '← Voltar ao treino')),
-      cab, seletor, ...corpo));
+      cab, encerrarBtn, seletor, ...corpo));
+  }
+
+  /* ---------- encerrar o treino (de um nadador ou da turma) ---------- */
+  const vaiParaNuvem = () => nuvemLigada() && !t.exemplo;
+
+  async function encerrarNadador(id) {
+    if (S.rodando.has(id) || S.encerrados.has(id)) return;
+    const n = porId.get(id);
+    const d = doDia(tempos, id, dHoje);
+    const ok = await perguntar({
+      titulo: `Encerrar o treino de ${n.nome}?`,
+      texto: `${d.reps ? `${repeticoes(d.reps)} hoje, melhor ${fmtTempo(d.melhor)}.` : 'Nenhuma repetição hoje.'} ` +
+        (vaiParaNuvem() ? 'Os dados do dia vão para a nuvem.' : 'Os dados do dia ficam salvos neste aparelho.'),
+      botao: 'Encerrar e salvar'
+    });
+    if (!ok || S.rodando.has(id)) return;
+    if (painelId === id) fecharPainel();
+    S.encerrados.add(id);
+    await salvarEncerrados();
+    montar();
+    enviarAgora(`Treino de ${n.nome}`);
+  }
+
+  async function encerrarTurma() {
+    const ativos = [...cards.keys()];
+    if (!ativos.length) return;
+    const nadando = ativos.filter(id => S.rodando.has(id)).length;
+    const ok = await perguntar({
+      titulo: 'Encerrar o treino da turma?',
+      texto: `${ativos.length === 1 ? '1 nadador ainda está' : `${ativos.length} nadadores ainda estão`} no treino. ` +
+        (vaiParaNuvem() ? 'Os dados de todos vão para a nuvem.' : 'Os dados de todos ficam salvos neste aparelho.') +
+        (nadando ? ' Tempos em andamento são descartados.' : ''),
+      botao: 'Encerrar e ver resumo'
+    });
+    if (!ok) return;
+    for (const id of cards.keys()) { S.rodando.delete(id); S.encerrados.add(id); }
+    await salvarEncerrados();
+    if (!algumRodando()) liberarTela();
+    enviarAgora('Treino da turma');
+    location.hash = `#/resumo/${turmaId}`;
+  }
+
+  async function reabrir(id) {
+    S.encerrados.delete(id);
+    await salvarEncerrados();
+    montar();
+  }
+
+  // Envia agora, sem esperar a próxima rodada da sincronização, e avisa como ficou.
+  async function enviarAgora(oque) {
+    if (!vaiParaNuvem()) { aviso(`${oque} encerrado e salvo no aparelho.`); return; }
+    await sincronizar();
+    if (estadoSincronia().fase === 'ok' && estadoSincronia().pendentes) await sincronizar();
+    const e = estadoSincronia();
+    if (e.fase === 'ok' && !e.pendentes) aviso(`${oque} salvo na nuvem.`);
+    else if (e.fase === 'offline') aviso(`${oque} encerrado. Sem internet: os dados sobem quando a conexão voltar.`);
+    else aviso(`${oque} encerrado e salvo no aparelho. O app tenta enviar de novo sozinho.`);
+  }
+
+  function pintarEncerrados() {
+    const lista = nads.filter(n => S.encerrados.has(n.id));
+    const s = statusNuvem(t);
+    listaEnc.textContent = '';
+    for (const n of lista) {
+      const d = doDia(tempos, n.id, dHoje);
+      listaEnc.append(h('div', { class: 'atleta encerrado' },
+        h('div', { class: 'at-info' },
+          h('span', { class: 'at-nome', text: n.nome }),
+          h('span', { class: 'at-melhor', text: d.reps ? `${repeticoes(d.reps)} · melhor hoje ${fmtTempo(d.melhor)}` : 'Sem repetições' }),
+          h('button', { class: 'link', type: 'button', 'aria-label': `Reabrir o treino de ${n.nome}`, onclick: () => reabrir(n.id) }, 'Reabrir')),
+        h('span', { class: 'sincronia', 'data-fase': s.fase, title: s.frase }, s.texto)));
+    }
+    secEnc.hidden = !lista.length;
+    btnEncerrarTurma.hidden = !cards.size;
+    btnResumo.hidden = cards.size > 0 || !lista.length;
   }
 
   /* ---------- relógio ---------- */
@@ -412,6 +508,7 @@ export async function render(caixa, turmaId) {
     if (S.ultimo.get(r.nadadorId)?.id === id) S.ultimo.delete(r.nadadorId);
     pintarTodos();
     listarSessao();
+    pintarEncerrados();
     aviso('Tempo apagado.');
   }
 
@@ -420,8 +517,10 @@ export async function render(caixa, turmaId) {
 
   montar();
   listarSessao();
+  const pararDeOuvir = aoMudarEstado(() => pintarEncerrados());   // "Enviando…" → "Salvo na nuvem"
 
   return () => {
+    pararDeOuvir();
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
     document.removeEventListener('visibilitychange', aoVoltar);

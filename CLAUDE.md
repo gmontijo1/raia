@@ -35,7 +35,17 @@ treino por raias sem pedido dele.
 
 ## Estado atual
 
-- **App v0.5.0 no ar (com login):** https://gmontijo1.github.io/raia/ (ver "Base do app" e "Publicação").
+- **App v0.6.0 no ar (com login):** https://gmontijo1.github.io/raia/ (ver "Base do app" e "Publicação").
+- **Fim do treino (v0.6.0, rodada 3 do Claude Design):** cada cartão do treino tem "Encerrar
+  treino". Confirma, tira o nadador da lista de hoje (vai para "Treino encerrado", com "Reabrir")
+  e chama `sincronizar()` na hora; a pílula mostra o estado real (`statusNuvem` em
+  `js/resumo-dia.js`: na nuvem, na fila, sem internet, no aparelho). Quem encerrou fica em
+  `config` (`encerrados:<turma>`, só no aparelho, vale para o dia). "Encerrar treino da turma"
+  encerra todos (descarta tempos em andamento) e abre `#/resumo/<turma>` (`telas/resumo.js`):
+  números do dia, recordes pessoais (melhor de hoje abaixo do melhor de todos os dias anteriores,
+  na mesma prova) e o melhor de cada nadador. "Compartilhar resumo" (`js/compartilhar.js`)
+  desenha o cartão num canvas e usa o compartilhamento do celular; no computador, baixa a
+  imagem e copia o texto.
 - **Visual (v0.5.0, escolhido pelo GÊ no Claude Design, opção "2a"):** topo com RAIA à esquerda, o
   logo do projeto no centro e a sincronização à direita; menu fixo embaixo (some com menos de 2
   itens); entrada sem cartão, com o logo grande e a corda de raia; LARGADA/PARAR em Helvetica

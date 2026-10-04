@@ -2,7 +2,7 @@
 
 **Não existem componentes React.** O Raia é um app web sem etapa de build (HTML, CSS e JS puro), e `window.Raia` vem vazio de propósito. Monte as telas com elementos HTML comuns em JSX (`className`) usando as classes abaixo. Todas existem em `_ds_bundle.css`, que já chega pelo `styles.css`. Use uma classe existente sempre que ela resolver. Layout novo pode usar `style` com os tokens `var(--…)`; nunca escreva cor em hex.
 
-**Leia antes de estilizar:** `_ds_bundle.css` é o CSS real do app (cerca de 310 linhas, com seções comentadas: cabeçalho e menu embaixo, estrutura, botões e campos, listas, cronômetro, painel do nadador, evolução, diálogo, conta e sincronização, agenda).
+**Leia antes de estilizar:** `_ds_bundle.css` é o CSS real do app (cerca de 330 linhas, com seções comentadas: cabeçalho e menu embaixo, estrutura, botões e campos, listas, cronômetro, fim do treino e resumo, painel do nadador, evolução, diálogo, conta e sincronização, agenda).
 
 **Tema:** claro por padrão, escuro automático por `prefers-color-scheme: dark`. Os nomes dos tokens são os mesmos nos dois temas; só o valor muda.
 
@@ -24,7 +24,8 @@
 | Cartões e texto | `card`, `card-head`, `lbl` (rótulo em maiúsculas), `sub`, `mut`, `dica`, `linha`, `vazio`, `etiqueta`, `chip recorde`, `chip neutro`, `mono` |
 | Ações | `btn` com `primario`, `fantasma`, `perigo`, `pequeno` ou `grande`; `link`; `acoes` (grupo de botões) |
 | Formulário | `form` (grade automática) com `campo` (label + input/select/textarea + `small`), `cheio` (ocupa a linha), `seg` (segmentado: `input type="radio"` seguido de `label`), `erro-campo`, `campo-codigo` |
-| Cronômetro | `barra-largada`; `atletas` (1 coluna, 2 a partir de 760px) > `atleta` (`data-st="nadando"` ou `"chegou"`) > `at-info` (`at-nome-btn` com `span.seta`, `at-melhor`, `at-nota`) + `at-acao` (`at-relogio`, `btn-cron largar` ou `btn-cron parar`) |
+| Cronômetro | `barra-largada`; `atletas` (1 coluna, 2 a partir de 760px) > `atleta` (`data-st="nadando"` ou `"chegou"`) > `at-info` (`at-nome-btn` com `span.seta`, `at-melhor`, `at-nota`, `btn pequeno at-encerrar`) + `at-acao` (`at-relogio`, `btn-cron largar` ou `btn-cron parar`) |
+| Fim do treino | `encerrados` (`lbl` + `atletas` com `atleta encerrado`: `at-nome`, `at-melhor`, `link` Reabrir e `span.sincronia`); `dialog.pergunta` (`h3`, `sub`, `acoes-coluna` com `btn primario grande` e `btn grande fantasma`); resumo: `resumo-cartao` > `resumo-faixa` (`logo-projeto`, `resumo-numeros` > `resumo-num` com `b` e `span`) + `corda` + `resumo-recordes` (`lbl`, `lista sessao`), `card linha-nuvem` |
 | Listas | `lista` > `li` > `item` (`b`, `sub`, `lado` em mono à direita); `turmas` > `card turma-card` (`nome`); `lista sessao` (`t`, `quem`, `meta`) |
 | Números | `blocos` > `bloco` (`lbl`, `v` ou `v bom`, `d`); `graficos` > `card` > `grafico` (SVG) + `dica-eixo`, com `balao` no toque; `tabela` > `table` (`td.n`, `td.bom`, `tr.riscado`) |
 | Outros | `painel` > `painel-in` (`painel-topo`, `painel-cab`, `painel-nome`), `sincronia` (`data-fase`: `ok`, `enviando`, `offline`, `erro`), `caixa-codigo` (`codigo`, `mensagem`), `agenda` > `agenda-item` (`agenda-topo`), `card plano` + `plano-texto`, `presenca`, `toast`, `sr` (só para leitor de tela) |

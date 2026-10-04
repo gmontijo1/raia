@@ -12,6 +12,7 @@ import { $, h } from './util.js';
 import * as inicio from './telas/inicio.js';
 import * as turma from './telas/turma.js';
 import * as treino from './telas/treino.js';
+import * as resumo from './telas/resumo.js';
 import * as nadador from './telas/nadador.js';
 import * as dados from './telas/dados.js';
 import * as entrar from './telas/entrar.js';
@@ -27,6 +28,7 @@ const EQUIPE = [
   [/^#\/?$/, inicio.render, 'turmas'],
   [/^#\/turma\/([\w-]+)$/, turma.render, 'turmas'],
   [/^#\/treino\/([\w-]+)$/, treino.render, 'turmas'],
+  [/^#\/resumo\/([\w-]+)$/, resumo.render, 'turmas'],
   [/^#\/nadador\/([\w-]+)$/, nadador.render, 'turmas'],
   [/^#\/dados$/, dados.render, 'dados']
 ];
