@@ -4,6 +4,6 @@
 // protege os dados são as regras do banco (RLS, ver supabase/esquema.sql).
 // NUNCA colocar aqui a chave secreta ("service_role" / "secret") nem a senha do banco.
 export const NUVEM = {
-  url: '',
-  chave: ''
+  url: 'https://lztxsbtrhckqshmnlhio.supabase.co',
+  chave: 'sb_publishable_bx7vnp0cpbjU2xC1bjHrCQ_amoSRDWb'
 };

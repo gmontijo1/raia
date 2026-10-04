@@ -125,7 +125,7 @@ window.addEventListener('raia:recebido', e => {
   if (/^#\/treino\//.test(location.hash)) return;
   const ativo = document.activeElement;
   if (ativo && /^(INPUT|TEXTAREA|SELECT)$/.test(ativo.tagName)) return;
-  if (document.querySelector('dialog[open]')) return;
+  if (document.querySelector('dialog[open], .caixa-codigo')) return;
   navegar();
 });
 

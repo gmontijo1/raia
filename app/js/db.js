@@ -185,10 +185,11 @@ export async function exportarTudo() {
 
 // Mescla registros com o que já existe: fica a versão mais recente de cada um (pelo
 // `atualizadoEm`). Usado pela cópia de segurança e pela sincronização com a nuvem.
+// Devolve quantos registros mudaram de verdade (a mesma versão de novo não conta).
 export async function mesclar(nome, registros) {
   const atuais = new Map((await todos(nome)).map(o => [o.id, o]));
   const novos = registros.filter(o => o && typeof o.id === 'string' &&
-    (!atuais.has(o.id) || String(o.atualizadoEm || '') >= String(atuais.get(o.id).atualizadoEm || '')));
+    (!atuais.has(o.id) || String(o.atualizadoEm || '') > String(atuais.get(o.id).atualizadoEm || '')));
   return gravarVarios(nome, novos);
 }
 
