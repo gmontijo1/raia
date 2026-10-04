@@ -19,3 +19,10 @@ build/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Sincronia com o Claude Design (/design-sync): scripts, build e estado local
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules

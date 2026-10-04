@@ -1,0 +1,10 @@
+{
+  "projectId": "78456406-bb9d-4474-9a54-889dce596c98",
+  "shape": "package",
+  "pkg": "raia",
+  "globalName": "Raia",
+  "entry": ".ds-sync/pacote/index.js",
+  "buildCmd": "bash .design-sync/preparar-pacote.sh",
+  "cssEntry": "css/raia.css",
+  "readmeHeader": ".design-sync/conventions.md"
+}
