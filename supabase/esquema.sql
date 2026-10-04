@@ -211,9 +211,11 @@ drop policy if exists convites_ler on public.convites;
 create policy convites_ler on public.convites for select to authenticated
   using (public.e_master() or (public.e_equipe() and papel = 'aluno'));
 
--- quem não entrou (anon) não acessa tabela nenhuma; quem entrou só faz o que a RLS deixa
+-- Quem não entrou (anon) não acessa tabela nenhuma; quem entrou só faz o que a RLS deixa.
+-- As permissões são dadas aqui uma a uma, então o projeto pode (e deve) ficar com
+-- "Automatically expose new tables" desligado. O anon só usa o schema para a função ping.
 revoke all on public.turmas, public.nadadores, public.tempos, public.planos, public.perfis, public.convites from anon;
-grant usage on schema public to authenticated;
+grant usage on schema public to anon, authenticated;
 grant select, insert, update on public.turmas, public.nadadores, public.tempos, public.planos to authenticated;
 revoke delete on public.turmas, public.nadadores, public.tempos, public.planos from authenticated;
 grant select on public.perfis, public.convites to authenticated;
