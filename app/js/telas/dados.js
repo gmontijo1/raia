@@ -6,6 +6,7 @@ import { VERSAO_APP } from '../versao.js';
 import { nuvemLigada, perfil, sair } from '../nuvem.js';
 import { sincronizar, aoMudarEstado, contarPendentes } from '../sincronia.js';
 import { planilhaPse } from '../pse.js';
+import { planilhaMedias } from '../esforco.js';
 
 const PAPEL = { master: 'master', professor: 'professor' };
 
@@ -110,6 +111,12 @@ export async function render(caixa) {
         baixar(`raia-pse-${hoje()}.csv`, planilhaPse(b.pse || [], b.turmas, b.nadadores), 'text/csv;charset=utf-8');
         msg.textContent = 'Planilha da PSE baixada. Abra o arquivo no Excel.';
       } }, 'Baixar PSE'),
+      h('button', { class: 'btn', type: 'button', onclick: async () => {
+        const b = await db.exportarTudo();
+        const vivas = (b.turmas || []).filter(x => !x.apagado);
+        baixar(`raia-pse-medias-${hoje()}.csv`, planilhaMedias(b.pse || [], vivas, (b.semanas || []).filter(x => !x.apagado)), 'text/csv;charset=utf-8');
+        msg.textContent = 'Médias de PSE por treino baixadas (com o planejado de cada um).';
+      } }, 'Baixar médias por treino'),
       msg)));
 
   /* backup */

@@ -65,6 +65,13 @@ treino por raias sem pedido dele.
   direto na nuvem (RLS: só a própria, `origem = 'aluno'`). Carga = PSE × duração (min, padrão 50,
   lembrada por turma). Aparece no histórico do aluno, na PSE média da semana no planejamento e na
   planilha "Baixar PSE" (tela Dados).
+- **Esforço planejado × PSE (v0.9.0, `js/esforco.js`):** a média da PSE de cada treino é sempre
+  calculada das respostas salvas (não se guarda a média à parte: resposta atrasada já entra).
+  Planejado de um treino = a faixa "PSE x-y" escrita na parte principal do treino do dia (ex.:
+  "PSE-6-8") ou, sem ela, intensidade da semana × 10. Cartão "Esforço: planejado × PSE" na tela
+  Semanas (filtro Todas / cada turma) e na tela da turma: resumo de 4 semanas (média, planejado,
+  diferença; |dif| < 0,5 = "dentro do planejado"), gráfico (faixa cinza = planejado, ponto azul =
+  média, traço = menor→maior resposta), tabela; planilha "Baixar médias por treino" (Dados).
 - **Tabelas novas exigem rodar o `supabase/esquema.sql` de novo.** Até isso, a sincronização
   pula `semanas`, `escala` e `pse` (marcadas `opcional`) sem travar o resto; o aluno também.
 - **Fim do treino (v0.6.0, rodada 3 do Claude Design):** cada cartão do treino tem "Encerrar

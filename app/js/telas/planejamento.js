@@ -12,6 +12,7 @@ import {
   volumeMetros, cargaMetros, mediaTreinos, extrasDe, temVcrit, temAvaliacao, blocoTreino
 } from '../semana.js';
 import { mediaPse, fmtPse } from '../pse.js';
+import { cartaoEsforco } from '../esforco.js';
 
 const ORDEM_DIAS = [1, 2, 3, 4, 5, 6, 0];   // segunda primeiro
 const segundaDe = iso => { const d = new Date(`${iso}T12:00:00`); return somarDias(iso, -((d.getDay() + 6) % 7)); };
@@ -68,6 +69,11 @@ export async function render(caixa, numeroPedido) {
     ro.observe(host);
     limpezas.push(() => { ro.disconnect(); cancelAnimationFrame(quadro); });
   }
+
+  /* ---------- esforço: planejado × PSE média de cada treino ---------- */
+  const esforco = cartaoEsforco({ pses, turmas: await db.listarTurmas(), semanas: todas });
+  caixa.append(esforco.el);
+  limpezas.push(esforco.limpar);
 
   /* ---------- a semana escolhida ---------- */
   const detalhe = h('section', { class: 'card semana-detalhe', tabindex: '-1', 'aria-live': 'polite' });
@@ -221,6 +227,7 @@ function legenda(semanas) {
 
 function desenharGrafico(host, balao, semanas, { atual, sel, aoEscolher }) {
   host.querySelector('svg')?.remove();
+  balao.hidden = true;   // redesenhou (ex.: girou a tela): o balão antigo ficaria fora do lugar
   const W = Math.max(280, host.clientWidth || 340), H = 210;
   const m = { l: 42, r: 6, t: 12, b: 40 };
   const pw = W - m.l - m.r, ph = H - m.t - m.b;

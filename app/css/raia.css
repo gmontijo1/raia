@@ -400,6 +400,16 @@ div.item-pse { cursor: default; }
 .encerrado-acoes { gap: 4px 16px; }
 .pse-marcar { display: inline-flex; align-items: center; gap: 4px; }
 .pse-pedido { border-left: 4px solid var(--rope); }
+/* acompanhamento do esforço: planejado × PSE média */
+.grafico-esforco { min-height: 200px; }
+.grafico-esforco svg { overflow: visible; }
+.g-plano { fill: var(--axis); fill-opacity: .45; }
+.g-pse-linha { fill: none; stroke: var(--series); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.g-bigode { stroke: var(--series); stroke-width: 2; stroke-opacity: .35; stroke-linecap: round; }
+.g-pse-ponto { fill: var(--series); stroke: var(--surface); stroke-width: 2; }
+.leg-faixa { width: 14px; height: 10px; border-radius: 3px; background: var(--axis); opacity: .6; }
+.leg-ponto-pse { width: 10px; height: 10px; border-radius: 50%; background: var(--series); }
+.leg-bigode { width: 2px; height: 12px; border-radius: 1px; background: var(--series); opacity: .45; }
 .lista-texto { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; color: var(--ink-2); font-size: 14px; }
 
 /* ---------- painel do nadador (repetições de hoje) ---------- */

@@ -5,6 +5,7 @@ import * as db from '../db.js';
 import { formTurma } from './inicio.js';
 import { abrirLancamento } from '../lancar.js';
 import { proximasDatas, descricaoTurma, horaCurta } from '../agenda.js';
+import { cartaoEsforco } from '../esforco.js';
 
 export async function render(caixa, turmaId) {
   const t = await db.turma(turmaId);
@@ -54,6 +55,14 @@ export async function render(caixa, turmaId) {
       nads.length ? h('span', { class: 'lbl', text: 'Melhor 50 m crawl' }) : null),
     nads.length ? lista : h('p', { class: 'sub', style: 'margin-top:8px', text: 'Nenhum nadador ainda. Cadastre abaixo.' })));
 
+  /* esforço da turma: PSE média de cada treino × planejado */
+  const pses = await db.psesDaTurma(turmaId);
+  let esforco = null;
+  if (pses.length) {
+    esforco = cartaoEsforco({ pses, turmas: [t], semanas: await db.listarSemanas(), fixo: t.id });
+    caixa.append(esforco.el);
+  }
+
   /* cadastro */
   const nome = h('input', { id: 'nad-nome', type: 'text', maxlength: 60, autocomplete: 'off', placeholder: 'Nome do nadador' });
   const umSo = h('form', { class: 'form' },
@@ -96,6 +105,7 @@ export async function render(caixa, turmaId) {
     }
     caixa.append(h('details', { class: 'card' }, h('summary', { text: `Arquivados (${arquivados.length})` }), l));
   }
+  return () => { if (esforco) esforco.limpar(); };
 }
 
 // Próximas datas de treino (pela agenda da turma) e o treino planejado de cada uma.

@@ -33,6 +33,8 @@ histórico, com um gráfico de evolução para cada um.
 - PSE (percepção subjetiva de esforço, 0 a 10) de cada aluno em cada treino: marcada ao encerrar
   o treino ou respondida pelo próprio aluno, com a carga (PSE × minutos), a média da semana ao
   lado da intensidade planejada e a planilha para o Excel.
+- Acompanhamento do esforço: a PSE média de cada treino comparada com o esforço planejado, em
+  gráfico ao longo do tempo (de todas as turmas ou de uma), com a tabela e a planilha das médias.
 - Evolução de cada nadador, lançamento de tempo à mão, planilha para o Excel e cópia de segurança.
 - Funciona sem internet na beira da piscina; os tempos sobem para a nuvem quando há conexão, e
   todos os professores veem o mesmo histórico.
