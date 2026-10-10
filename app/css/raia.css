@@ -65,6 +65,8 @@
   --pse-7: #f57c20; --pse-7-tinta: #2a1200;
   --pse-9: #d9480f; --pse-9-tinta: #ffffff;
   --pse-10: #b3261e; --pse-10-tinta: #ffffff;
+  /* medalhas do painel da semana (ouro = a cor da corda) e o texto escuro em cima delas */
+  --medalha-1: var(--rope); --medalha-2: #aebbc4; --medalha-3: #c8875a; --mvp-tinta: #241a00;
   --font-display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
   --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -400,6 +402,44 @@ div.item-pse { cursor: default; }
 .encerrado-acoes { gap: 4px 16px; }
 .pse-marcar { display: inline-flex; align-items: center; gap: 4px; }
 .pse-pedido { border-left: 4px solid var(--rope); }
+/* ---------- painel da semana da turma: MVP, pódio, números e evolução ---------- */
+.painel-semana { display: flex; flex-direction: column; gap: 12px; }
+.semana-nav { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 12px; }
+.semana-seta { min-width: 44px; min-height: 44px; padding: 0; font-size: 24px; line-height: 1; }
+.semana-nav-titulo { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 3px; min-width: 0; }
+.semana-nav-titulo b { font: 800 22px/1.05 var(--font-display); letter-spacing: .04em; text-transform: uppercase; }
+.mvp { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: center; border-color: var(--rope); background: linear-gradient(120deg, var(--rope-soft), var(--surface) 75%); box-shadow: inset 5px 0 0 var(--rope); padding: 18px 16px 18px 20px; }
+.mvp-medalha { width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; background: var(--medalha-1); color: var(--mvp-tinta); box-shadow: 0 0 0 4px var(--surface), 0 0 0 7px var(--medalha-1); }
+.mvp-medalha span { font: 800 24px/1 var(--font-display); letter-spacing: .06em; }
+.mvp-texto { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.mvp-nome { font: 800 30px/1.05 var(--font-display); letter-spacing: .03em; text-transform: uppercase; color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
+a.mvp-nome:hover { color: var(--accent); }
+.sem-mvp { border-color: var(--line); background: var(--surface); box-shadow: none; }
+.sem-mvp .mvp-medalha { background: var(--line); color: var(--muted); box-shadow: 0 0 0 4px var(--surface), 0 0 0 7px var(--line); }
+.sem-mvp .mvp-nome { font-size: 20px; }
+.podio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: end; margin: 14px auto 0; max-width: 560px; }
+.podio-lugar { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; min-width: 0; }
+.podio-lugar.vazio { visibility: hidden; }
+.podio-nome { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 14px; color: var(--ink); text-decoration: none; }
+.podio-v { font: 600 18px/1.1 var(--font-mono); color: var(--good-text); }
+.podio-prova { font-size: 11px; color: var(--muted); }
+.podio-degrau { width: 100%; margin-top: 6px; display: flex; justify-content: center; padding-top: 10px; border-radius: 10px 10px 0 0; background: color-mix(in srgb, var(--medalha) 22%, var(--surface)); border: 1px solid color-mix(in srgb, var(--medalha) 55%, var(--surface)); border-bottom: 0; }
+.podio-lugar.p1 { --medalha: var(--medalha-1); }
+.podio-lugar.p2 { --medalha: var(--medalha-2); }
+.podio-lugar.p3 { --medalha: var(--medalha-3); }
+.p1 .podio-degrau { height: 96px; }
+.p2 .podio-degrau { height: 70px; }
+.p3 .podio-degrau { height: 54px; }
+.podio-medalha { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--medalha); color: var(--mvp-tinta); font: 800 16px/1 var(--font-display); }
+.grafico-evolucao-turma { min-height: 190px; }
+.grafico-evolucao-turma svg { overflow: visible; }
+.g-evo-area { fill: var(--series); fill-opacity: .12; }
+.g-evo-linha { fill: none; stroke: var(--series); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.g-evo-ponto { fill: var(--series); stroke: var(--surface); stroke-width: 2; }
+.g-evo-anel { fill: none; stroke: var(--ink); stroke-width: 2; }
+.turma-mvp { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); }
+.mvp-mini { display: inline-flex; align-items: center; padding: 3px 7px; border-radius: 999px; background: var(--medalha-1); color: var(--mvp-tinta); font: 800 13px/1 var(--font-display); letter-spacing: .06em; }
+
 /* acompanhamento do esforço: planejado × PSE média */
 .grafico-esforco { min-height: 200px; }
 .grafico-esforco svg { overflow: visible; }

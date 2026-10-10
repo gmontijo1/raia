@@ -6,15 +6,18 @@ import { formTurma } from './inicio.js';
 import { abrirLancamento } from '../lancar.js';
 import { proximasDatas, descricaoTurma, horaCurta } from '../agenda.js';
 import { cartaoEsforco } from '../esforco.js';
+import { painelDaTurma } from '../painel-turma.js';
 
 export async function render(caixa, turmaId) {
   const t = await db.turma(turmaId);
   if (!t || t.apagado) { caixa.append(naoEncontrado('Turma')); return; }
-  const [nads, arquivados, tempos, planos] = await Promise.all([
+  const [nads, arquivados, tempos, planos, pses, semanas] = await Promise.all([
     db.nadadoresDaTurma(turmaId),
     db.nadadoresDaTurma(turmaId, { incluirArquivados: true }).then(l => l.filter(n => n.arquivado)),
     db.temposDaTurma(turmaId),
-    db.planosDaTurma(turmaId)
+    db.planosDaTurma(turmaId),
+    db.psesDaTurma(turmaId),
+    db.listarSemanas()
   ]);
   const recarregar = () => { caixa.textContent = ''; return render(caixa, turmaId); };
 
@@ -36,8 +39,12 @@ export async function render(caixa, turmaId) {
         nads.length ? h('a', { class: 'btn primario', href: `#/treino/${t.id}` }, 'Começar treino') : null,
         nads.length ? h('button', { class: 'btn', type: 'button', onclick: () => abrirLancamento({ turmaId, nadadores: nads, aoSalvar: recarregar }) }, 'Lançar tempo à mão') : null,
         h('button', { class: 'btn fantasma', type: 'button', 'aria-expanded': 'false', onclick: e => { edicao.hidden = !edicao.hidden; e.currentTarget.setAttribute('aria-expanded', String(!edicao.hidden)); } }, 'Editar turma'))),
-    edicao,
-    cartaoAgenda(t, planos, recarregar));
+    edicao);
+
+  /* painel da semana: MVP, pódio, números e evolução da turma */
+  const painel = tempos.length || pses.length ? painelDaTurma({ turma: t, tempos, nadadores: [...nads, ...arquivados], pses, semanas }) : null;
+  if (painel) caixa.append(painel.el);
+  caixa.append(cartaoAgenda(t, planos, recarregar));
 
   /* nadadores */
   const lista = h('ul', { class: 'lista' });
@@ -56,10 +63,9 @@ export async function render(caixa, turmaId) {
     nads.length ? lista : h('p', { class: 'sub', style: 'margin-top:8px', text: 'Nenhum nadador ainda. Cadastre abaixo.' })));
 
   /* esforço da turma: PSE média de cada treino × planejado */
-  const pses = await db.psesDaTurma(turmaId);
   let esforco = null;
   if (pses.length) {
-    esforco = cartaoEsforco({ pses, turmas: [t], semanas: await db.listarSemanas(), fixo: t.id });
+    esforco = cartaoEsforco({ pses, turmas: [t], semanas, fixo: t.id });
     caixa.append(esforco.el);
   }
 
@@ -105,7 +111,7 @@ export async function render(caixa, turmaId) {
     }
     caixa.append(h('details', { class: 'card' }, h('summary', { text: `Arquivados (${arquivados.length})` }), l));
   }
-  return () => { if (esforco) esforco.limpar(); };
+  return () => { if (esforco) esforco.limpar(); if (painel) painel.limpar(); };
 }
 
 // Próximas datas de treino (pela agenda da turma) e o treino planejado de cada uma.

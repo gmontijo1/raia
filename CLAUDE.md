@@ -72,6 +72,15 @@ treino por raias sem pedido dele.
   Semanas (filtro Todas / cada turma) e na tela da turma: resumo de 4 semanas (média, planejado,
   diferença; |dif| < 0,5 = "dentro do planejado"), gráfico (faixa cinza = planejado, ponto azul =
   média, traço = menor→maior resposta), tabela; planilha "Baixar médias por treino" (Dados).
+- **Painel da semana da turma (v0.10.0, `js/painel-turma.js`, topo da tela da turma):** semana =
+  segunda a domingo, setas ‹ › (começa na atual; se ela não tem tempo, na última que tem).
+  Evolução de um aluno na semana = % que o melhor da semana ficou abaixo do melhor anterior à
+  semana, na mesma prova (vale a prova em que mais melhorou; 1º tempo numa prova não conta).
+  **MVP** = maior evolução (desempate: recordes, depois repetições); sem melhora, sem MVP. Pódio
+  dos 3 maiores, "mais dedicação" (mais repetições), números da semana (alunos, repetições,
+  recordes, PSE média × planejado), gráfico "Evolução da turma" (média de quanto cada aluno está
+  mais rápido que na 1ª semana dele, na prova mais nadada; tocar numa semana leva a ela) e a
+  tabela de cada aluno. O MVP da semana atual também aparece no cartão da turma na lista.
 - **Tabelas novas exigem rodar o `supabase/esquema.sql` de novo.** Até isso, a sincronização
   pula `semanas`, `escala` e `pse` (marcadas `opcional`) sem travar o resto; o aluno também.
 - **Fim do treino (v0.6.0, rodada 3 do Claude Design):** cada cartão do treino tem "Encerrar

@@ -35,6 +35,8 @@ histórico, com um gráfico de evolução para cada um.
   lado da intensidade planejada e a planilha para o Excel.
 - Acompanhamento do esforço: a PSE média de cada treino comparada com o esforço planejado, em
   gráfico ao longo do tempo (de todas as turmas ou de uma), com a tabela e a planilha das médias.
+- Painel da semana de cada turma: MVP da semana (quem mais melhorou o próprio recorde), pódio das
+  maiores evoluções, números da semana e a evolução da turma semana a semana.
 - Evolução de cada nadador, lançamento de tempo à mão, planilha para o Excel e cópia de segurança.
 - Funciona sem internet na beira da piscina; os tempos sobem para a nuvem quando há conexão, e
   todos os professores veem o mesmo histórico.

@@ -1,11 +1,12 @@
 // Tela inicial: lista de turmas e criação de turma nova.
 
-import { h, aviso } from '../util.js';
+import { h, aviso, dec1 } from '../util.js';
 import * as db from '../db.js';
 import { criarTurmaExemplo } from '../exemplo.js';
 import { DIAS_CURTOS, normalizar, textoAgenda, descricaoTurma } from '../agenda.js';
 import { nuvemLigada } from '../nuvem.js';
 import { NOME_PROJETO } from '../marca.js';
+import { mvpDaSemana } from '../painel-turma.js';
 
 export async function render(caixa) {
   const turmas = await db.listarTurmas();
@@ -34,11 +35,17 @@ export async function render(caixa) {
   }
 
   const grade = h('div', { class: 'turmas' });
-  const contas = await Promise.all(turmas.map(t => db.nadadoresDaTurma(t.id)));
+  const [contas, tempos] = await Promise.all([
+    Promise.all(turmas.map(t => db.nadadoresDaTurma(t.id))),
+    Promise.all(turmas.map(t => db.temposDaTurma(t.id)))
+  ]);
   turmas.forEach((t, i) => {
+    const mvp = mvpDaSemana(tempos[i], contas[i]);
     grade.append(h('a', { class: 'card turma-card', href: `#/turma/${t.id}` },
       h('span', { class: 'nome', text: t.nome }),
       descricaoTurma(t) ? h('span', { class: 'sub', text: descricaoTurma(t) }) : null,
+      mvp ? h('span', { class: 'turma-mvp' }, h('span', { class: 'mvp-mini', text: 'MVP' }),
+        h('span', { text: `${mvp.nadador.nome} · ${dec1(mvp.melhor.pct)}% mais rápido` })) : null,
       h('span', { class: 'linha' },
         h('span', { class: 'mut', text: `${contas[i].length} ${contas[i].length === 1 ? 'nadador' : 'nadadores'}` }),
         t.exemplo ? h('span', { class: 'etiqueta', text: nuvemLigada() ? 'exemplo · só neste aparelho' : 'exemplo' }) : null)));
