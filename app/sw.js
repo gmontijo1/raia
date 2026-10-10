@@ -1,7 +1,7 @@
 // Service worker do Raia: guarda o app no aparelho para abrir e funcionar sem internet.
 // Ao mudar qualquer arquivo do app, suba a VERSAO aqui e em js/versao.js.
 
-const VERSAO = '0.11.0';
+const VERSAO = '0.11.1';
 const CACHE = `raia-${VERSAO}`;
 const ARQUIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'css/raia.css',

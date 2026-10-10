@@ -14,11 +14,11 @@
 import { h, s, fmtTempo, combo, combos, doCombo, melhorDe, dataCurta, dec1, hoje } from './util.js';
 import { semanaDe, datasSemana, somarDias } from './semana.js';
 import { fmtPse } from './pse.js';
-import { sessoes } from './esforco.js';
+import { sessoes, comSinal } from './esforco.js';
 
 export const segundaDe = iso => { const d = new Date(`${iso}T12:00:00`); return somarDias(iso, -((d.getDay() + 6) % 7)); };
 const naSemana = (iso, inicio) => iso >= inicio && iso < somarDias(inicio, 7);
-const pctTxt = v => `${v > 0 ? '+' : v < 0 ? '−' : ''}${dec1(Math.abs(v))}%`;
+const pctTxt = v => `${comSinal(v)}%`;
 
 // Prova mais nadada pela turma ([dist, estilo]).
 export function provaPrincipal(tempos) {

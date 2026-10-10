@@ -57,9 +57,10 @@ async function planilha() {
   const b = await db.exportarTudo();
   const turmas = new Map(b.turmas.map(t => [t.id, t.nome]));
   const nads = new Map(b.nadadores.map(n => [n.id, n.nome]));
+  const exemplos = new Set(b.turmas.filter(t => t.exemplo).map(t => t.id));   // dados inventados ficam de fora
   const campo = v => { const s = String(v ?? ''); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   const linhas = [['turma', 'nadador', 'data', 'distancia_m', 'estilo', 'tempo_s', 'tempo', 'repeticao', 'origem'].join(';')];
-  b.tempos.filter(r => !r.apagado)
+  b.tempos.filter(r => !r.apagado && !exemplos.has(r.turmaId))
     .sort((x, y) => (x.data === y.data ? (x.criadoEm < y.criadoEm ? -1 : 1) : x.data < y.data ? -1 : 1))
     .forEach(r => linhas.push([turmas.get(r.turmaId), nads.get(r.nadadorId), r.data, r.dist, r.estilo, dec2(r.t), fmtTempo(r.t), r.rep, r.origem].map(campo).join(';')));
   return '﻿' + linhas.join('\r\n');
@@ -108,7 +109,8 @@ export async function render(caixa) {
       h('button', { class: 'btn primario', type: 'button', onclick: async () => { baixar(`raia-tempos-${hoje()}.csv`, await planilha(), 'text/csv;charset=utf-8'); msg.textContent = 'Planilha baixada. Abra o arquivo no Excel.'; } }, 'Baixar tempos'),
       h('button', { class: 'btn', type: 'button', onclick: async () => {
         const b = await db.exportarTudo();
-        baixar(`raia-pse-${hoje()}.csv`, planilhaPse(b.pse || [], b.turmas, b.nadadores), 'text/csv;charset=utf-8');
+        const exemplos = new Set((b.turmas || []).filter(x => x.exemplo).map(x => x.id));
+        baixar(`raia-pse-${hoje()}.csv`, planilhaPse((b.pse || []).filter(p => !exemplos.has(p.turmaId)), b.turmas, b.nadadores), 'text/csv;charset=utf-8');
         msg.textContent = 'Planilha da PSE baixada. Abra o arquivo no Excel.';
       } }, 'Baixar PSE'),
       h('button', { class: 'btn', type: 'button', onclick: async () => {

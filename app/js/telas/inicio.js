@@ -2,7 +2,7 @@
 
 import { h, aviso, dec1 } from '../util.js';
 import * as db from '../db.js';
-import { criarTurmaExemplo } from '../exemplo.js';
+import { criarTurmaExemplo, VERSAO_EXEMPLO } from '../exemplo.js';
 import { DIAS_CURTOS, normalizar, textoAgenda, descricaoTurma } from '../agenda.js';
 import { nuvemLigada } from '../nuvem.js';
 import { NOME_PROJETO } from '../marca.js';
@@ -52,6 +52,21 @@ export async function render(caixa) {
   });
   caixa.append(grade, cartaoNova);
   if (!temExemplo) caixa.append(h('p', { class: 'sub' }, 'Quer testar sem dados reais? ', botaoExemplo('link')));
+  // turma de exemplo de uma versão antiga (sem PSE e sem Vcrit): oferece recriar
+  const antiga = turmas.find(t => t.exemplo && (t.exemploVersao || 1) < VERSAO_EXEMPLO);
+  if (antiga) {
+    caixa.append(h('p', { class: 'sub' }, 'A turma de exemplo é de uma versão antiga do app, sem PSE e sem Vcrit. ',
+      h('button', {
+        class: 'link', type: 'button',
+        onclick: async e => {
+          e.currentTarget.disabled = true;
+          await db.apagarTurmaDeVez(antiga.id);
+          const t = await criarTurmaExemplo();
+          aviso('Turma de exemplo recriada com os dados novos.');
+          location.hash = `#/turma/${t.id}`;
+        }
+      }, 'Recriar com os dados novos')));
+  }
 }
 
 function botaoExemplo(estilo = 'btn') {

@@ -18,7 +18,10 @@ const ORDEM_DIAS = [1, 2, 3, 4, 5, 6, 0];   // segunda primeiro
 const segundaDe = iso => { const d = new Date(`${iso}T12:00:00`); return somarDias(iso, -((d.getDay() + 6) % 7)); };
 
 export async function render(caixa, numeroPedido) {
-  const [todas, escala, pses] = await Promise.all([db.listarSemanas(), db.listarEscala(), db.todasPses()]);
+  const [todas, escala, pses, turmas] = await Promise.all([db.listarSemanas(), db.listarEscala(), db.todasPses(), db.listarTurmas()]);
+  // a PSE média da semana é das turmas reais (a turma de exemplo fica de fora)
+  const exemplos = new Set(turmas.filter(t => t.exemplo).map(t => t.id));
+  const psesReais = pses.filter(p => !exemplos.has(p.turmaId));
   const dHoje = hoje();
   const atualGeral = semanaDe(todas, dHoje);
   const semestre = (atualGeral || todas[todas.length - 1] || {}).semestre;
@@ -71,7 +74,7 @@ export async function render(caixa, numeroPedido) {
   }
 
   /* ---------- esforço: planejado × PSE média de cada treino ---------- */
-  const esforco = cartaoEsforco({ pses, turmas: await db.listarTurmas(), semanas: todas });
+  const esforco = cartaoEsforco({ pses, turmas, semanas: todas });
   caixa.append(esforco.el);
   limpezas.push(esforco.limpar);
 
@@ -108,7 +111,7 @@ export async function render(caixa, numeroPedido) {
         h('div', { class: 'bloco' }, h('span', { class: 'lbl', text: 'Treinos' }), h('span', { class: 'v', text: String((x.treinos || []).length) }), h('span', { class: 'd', text: media ? `média ${fmtMetros(media)}` : 'ainda não escritos' })),
         // o que os alunos sentiram (PSE média de todas as turmas na semana) ao lado do planejado
         (() => {
-          const daSemana = pses.filter(p => p.data >= x.inicio && p.data < somarDias(x.inicio, 7));
+          const daSemana = psesReais.filter(p => p.data >= x.inicio && p.data < somarDias(x.inicio, 7));
           return h('div', { class: 'bloco' }, h('span', { class: 'lbl', text: 'PSE média' }),
             h('span', { class: 'v', text: fmtPse(mediaPse(daSemana)) }),
             h('span', { class: 'd', text: daSemana.length ? `${daSemana.length} ${daSemana.length === 1 ? 'resposta' : 'respostas'} dos alunos` : 'sem respostas' }));

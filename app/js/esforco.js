@@ -36,6 +36,7 @@ export function sessoes(pses, turmas, semanas, { turmaId = null } = {}) {
   const grupos = new Map();
   for (const p of pses) {
     if (p.apagado || (turmaId && p.turmaId !== turmaId) || !porId.has(p.turmaId)) continue;
+    if (!turmaId && porId.get(p.turmaId).exemplo) continue;   // "Todas" não mistura a turma de exemplo
     const chave = p.data;
     if (!grupos.has(chave)) grupos.set(chave, []);
     grupos.get(chave).push(p);
@@ -55,7 +56,9 @@ export function sessoes(pses, turmas, semanas, { turmaId = null } = {}) {
 // fixo: id da turma (tela da turma) — sem filtro. Devolve { el, limpar }.
 export function cartaoEsforco({ pses, turmas, semanas, fixo = null }) {
   const turmasComPse = turmas.filter(t => pses.some(p => p.turmaId === t.id && !p.apagado));
-  let filtro = fixo;
+  // Sem PSE nas turmas reais (aparelho só com a turma de exemplo), já abre na de exemplo.
+  const temReal = turmasComPse.some(t => !t.exemplo);
+  let filtro = fixo || (temReal ? null : turmasComPse.find(t => t.exemplo)?.id || null);
   const corpo = h('div');
   const el = h('section', { class: 'card esforco' },
     h('div', { class: 'card-head' }, h('h3', { text: 'Esforço: planejado × PSE' }), h('a', { class: 'link', href: '#/pse' }, 'Escala de PSE')),
@@ -65,7 +68,8 @@ export function cartaoEsforco({ pses, turmas, semanas, fixo = null }) {
 
   function filtroTurmas() {
     const g = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': 'Turma', style: 'margin-top:10px' });
-    for (const [v, txt] of [[null, 'Todas'], ...turmasComPse.map(t => [t.id, t.nome])]) {
+    const todasTxt = turmasComPse.some(t => t.exemplo) ? 'Todas (sem o exemplo)' : 'Todas';
+    for (const [v, txt] of [[null, todasTxt], ...turmasComPse.map(t => [t.id, t.nome])]) {
       const id = `esf-${v || 'todas'}`;
       const inp = h('input', { type: 'radio', name: 'esf-turma', id, value: v || '' });
       if (v === filtro) inp.checked = true;
@@ -94,7 +98,7 @@ export function cartaoEsforco({ pses, turmas, semanas, fixo = null }) {
     corpo.append(h('div', { class: 'blocos', style: 'margin-top:12px' },
       bloco('PSE média · 4 semanas', fmtPse(mReal), `${recentes.length} ${recentes.length === 1 ? 'treino' : 'treinos'} · ${respostas} ${respostas === 1 ? 'resposta' : 'respostas'}`),
       bloco('Planejado · 4 semanas', mPlano != null ? fmtPse(mPlano) : '–', mPlano != null ? 'média dos treinos com plano' : 'sem planejamento'),
-      bloco('Diferença', dif != null ? `${dif > 0 ? '+' : dif < 0 ? '−' : ''}${dec1(Math.abs(dif))}` : '–',
+      bloco('Diferença', dif != null ? `${comSinal(dif)}` : '–',
         dif == null ? 'sem planejamento' : Math.abs(dif) < 0.5 ? 'dentro do planejado' : dif < 0 ? 'mais leve que o planejado' : 'mais pesado que o planejado')));
 
     const host = h('div', { class: 'grafico grafico-esforco' });
@@ -133,6 +137,8 @@ export function cartaoEsforco({ pses, turmas, semanas, fixo = null }) {
 }
 
 const bloco = (rotulo, valor, detalhe) => h('div', { class: 'bloco' }, h('span', { class: 'lbl', text: rotulo }), h('span', { class: 'v', text: valor }), h('span', { class: 'd', text: detalhe }));
+// "+1,5", "−0,4", "0,0" (arredonda antes de pôr o sinal: −0,04 vira 0,0)
+export const comSinal = v => { const r = Math.round(v * 10) / 10; return `${r > 0 ? '+' : r < 0 ? '−' : ''}${dec1(Math.abs(r))}`; };
 const textoPlano = p => (!p ? 'sem planejamento' : p.min === p.max ? `${fmtPse(p.alvo)}${p.fonte === 'semana' ? ` (intensidade ${pct(p.semana.intensidade)})` : ''}` : `${p.min} a ${p.max}`);
 
 function tabela(lista) {
@@ -145,7 +151,7 @@ function tabela(lista) {
         h('td', { class: 'n', text: fmtPse(x.media) }),
         h('td', { class: 'n', text: String(x.n) }),
         h('td', { text: textoPlano(x.planejado) }),
-        h('td', { class: 'n', text: x.planejado ? `${x.media - x.planejado.alvo > 0 ? '+' : x.media - x.planejado.alvo < 0 ? '−' : ''}${dec1(Math.abs(x.media - x.planejado.alvo))}` : '–' })))))));
+        h('td', { class: 'n', text: x.planejado ? `${comSinal(x.media - x.planejado.alvo)}` : '–' })))))));
 }
 
 /* ---------- o gráfico ---------- */
@@ -230,7 +236,7 @@ function desenharEsforco(host, balao, todos) {
 export function planilhaMedias(pses, turmas, semanas) {
   const linhas = [['data', 'turma', 'pse_media', 'respostas', 'menor', 'maior', 'planejado_min', 'planejado_max', 'origem_do_planejado'].join(';')];
   const num = v => (v == null ? '' : String(Math.round(v * 10) / 10).replace('.', ','));
-  for (const t of turmas) {
+  for (const t of turmas.filter(x => !x.exemplo)) {
     for (const x of sessoes(pses, turmas, semanas, { turmaId: t.id })) {
       linhas.push([x.data, t.nome, num(x.media), x.n, x.min, x.max, num(x.planejado?.min), num(x.planejado?.max),
         x.planejado ? (x.planejado.fonte === 'treino' ? 'PSE escrita no treino' : 'intensidade da semana') : ''].join(';'));

@@ -126,8 +126,14 @@ direto no navegador. Não usar bundler, npm ou TypeScript: o PC do GÊ não tem 
   `app/js/versao.js` (VERSAO_APP), e incluir arquivo novo na lista `ARQUIVOS` do `sw.js`.** Sem
   isso, os aparelhos continuam com a versão antiga. Quando há versão nova, o app mostra
   "Atualizar agora" (não recarrega sozinho, para não interromper um treino).
-- **Exemplo:** `#/carregar-exemplo` cria a "Turma de exemplo" (8 nadadores, 12 semanas de tempos
-  inventados). Ela pode ser apagada de vez em "Editar turma".
+- **Exemplo (v0.11, `js/exemplo.js`, `VERSAO_EXEMPLO = 2`):** "Carregar turma de exemplo" (ou
+  `#/carregar-exemplo`) cria a "Turma de exemplo", só no aparelho (`exemplo: true`, nunca sobe):
+  10 alunos inventados, 12 semanas de terças e quintas 12h até ontem, faltas, 3–6 repetições de
+  50 m crawl + 25 m crawl + 50 m costas melhorando, testes de Vcrit (400/200) nas semanas com
+  Vcrit no planejamento, e PSE perto do planejado (`planejadoDoTreino`). Usa o planejamento e a
+  escala do aparelho, sem criar nem mudar nada neles. Fica fora de "Todas" no gráfico de esforço,
+  da PSE média da semana e das planilhas (tempos, PSE, médias). Turma de exemplo antiga (sem
+  `exemploVersao`) ganha o link "Recriar com os dados novos" na lista. Apaga de vez em "Editar turma".
 - **Fontes e ícones** ficam dentro de `app/` (sem depender da internet). Ícones PNG gerados com
   System.Drawing pelo PowerShell.
 
