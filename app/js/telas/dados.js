@@ -113,8 +113,11 @@ export async function render(caixa) {
     const f = arquivo.files[0];
     if (!f) return;
     try {
-      const total = await db.importarTudo(JSON.parse(await f.text()));
-      msgB.textContent = total ? `Cópia restaurada: ${total} registros novos ou atualizados.` : 'Nada novo nessa cópia: este aparelho já tinha tudo.';
+      const pacote = JSON.parse(await f.text());
+      const total = await db.importarTudo(pacote);
+      msgB.textContent = pacote.tipo === 'importacao'
+        ? `Importação feita: ${total} registros (turmas, alunos, semanas e escala).${nuvem ? ' Eles sobem para a nuvem na próxima sincronização.' : ''}`
+        : total ? `Cópia restaurada: ${total} registros novos ou atualizados.` : 'Nada novo nessa cópia: este aparelho já tinha tudo.';
     } catch (e) {
       msgB.textContent = e instanceof SyntaxError ? 'Esse arquivo está danificado ou não é uma cópia do Raia.' : e.message;
     }

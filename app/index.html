@@ -20,7 +20,10 @@
       el.querySelector('span').textContent = msg;
       el.hidden = false;
     }
-    window.addEventListener('error', function (e) { mostrar(e.message || 'erro desconhecido'); });
+    window.addEventListener('error', function (e) {
+      if (/ResizeObserver loop/.test(e.message || '')) return;   // aviso inofensivo do navegador, não é erro
+      mostrar(e.message || 'erro desconhecido');
+    });
     window.addEventListener('unhandledrejection', function (e) { mostrar((e.reason && e.reason.message) || String(e.reason)); });
     setTimeout(function () {
       if (!document.documentElement.dataset.pronto) mostrar('o app não terminou de carregar. Recarregue a página; se continuar, use um navegador atualizado (Chrome, Safari ou Edge).');

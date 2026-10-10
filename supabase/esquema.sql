@@ -6,8 +6,9 @@
 -- MASTER inicial, válido por 7 dias, se ainda não existir nenhum master.
 --
 -- Segurança (Row Level Security em todas as tabelas):
---   aluno     → lê só o próprio cadastro, os próprios tempos, a agenda e os planos da turma.
---   professor → lê e grava turmas, nadadores, tempos e planos; gera códigos de aluno.
+--   aluno     → lê só o próprio cadastro, os próprios tempos, a agenda, os planos da turma e o
+--               planejamento do semestre (semanas).
+--   professor → lê e grava turmas, nadadores, tempos, planos, semanas e escala; gera códigos de aluno.
 --   master    → tudo do professor + gera códigos de professor e master, vê e remove acessos.
 -- Quem entra com Google mas ainda não usou um código não vê nada.
 --
@@ -77,6 +78,38 @@ create table if not exists public.planos (
 create index if not exists planos_turma_data on public.planos (turma_id, data);
 create index if not exists planos_sinc on public.planos (sincronizado_em);
 
+-- planejamento do semestre: uma linha por semana, igual para todas as turmas (v0.7.0)
+create table if not exists public.semanas (
+  id               uuid primary key,
+  semestre         text not null check (length(semestre) between 1 and 20),
+  numero           smallint not null check (numero between 1 and 60),
+  inicio           date not null,                              -- segunda-feira da semana
+  periodo          text check (length(periodo) <= 80),         -- ex.: "Potência Aeróbia"
+  conteudo         text check (length(conteudo) <= 200),       -- ex.: "A3, AN2"
+  volume           numeric(4, 3) check (volume between 0 and 2),        -- fração de 4500 m
+  intensidade      numeric(4, 3) check (intensidade between 0 and 1),
+  extras           text check (length(extras) <= 200),         -- ex.: "Vcrit; Avaliação física"
+  treinos          jsonb not null default '[]'::jsonb,         -- [{ dia, aquecimento, principal, soltura, total, ...Obs }]
+  apagado          boolean not null default false,
+  criado_em        timestamptz not null default now(),
+  atualizado_em    timestamptz not null default now(),
+  sincronizado_em  timestamptz not null default now()
+);
+create index if not exists semanas_sinc on public.semanas (sincronizado_em);
+
+-- escala de professores: quem dá aula em cada dia da semana e horário (v0.7.0)
+create table if not exists public.escala (
+  id               uuid primary key,
+  dia              smallint not null check (dia between 0 and 6),   -- 0 = domingo
+  hora             text not null check (hora ~ '^[0-2][0-9]:[0-5][0-9]$'),
+  professores      text not null check (length(professores) <= 300),
+  apagado          boolean not null default false,
+  criado_em        timestamptz not null default now(),
+  atualizado_em    timestamptz not null default now(),
+  sincronizado_em  timestamptz not null default now()
+);
+create index if not exists escala_sinc on public.escala (sincronizado_em);
+
 create index if not exists turmas_sinc on public.turmas (sincronizado_em);
 
 -- ---------------------------------------------------------------- acessos
@@ -124,6 +157,10 @@ drop trigger if exists carimbar on public.tempos;
 create trigger carimbar before insert or update on public.tempos for each row execute function public.carimbar();
 drop trigger if exists carimbar on public.planos;
 create trigger carimbar before insert or update on public.planos for each row execute function public.carimbar();
+drop trigger if exists carimbar on public.semanas;
+create trigger carimbar before insert or update on public.semanas for each row execute function public.carimbar();
+drop trigger if exists carimbar on public.escala;
+create trigger carimbar before insert or update on public.escala for each row execute function public.carimbar();
 
 -- ---------------------------------------------------------------- quem é quem
 
@@ -160,6 +197,8 @@ alter table public.turmas    enable row level security;
 alter table public.nadadores enable row level security;
 alter table public.tempos    enable row level security;
 alter table public.planos    enable row level security;
+alter table public.semanas   enable row level security;
+alter table public.escala    enable row level security;
 alter table public.perfis    enable row level security;
 alter table public.convites  enable row level security;
 
@@ -204,6 +243,25 @@ create policy planos_alterar on public.planos for update to authenticated
   using (public.e_equipe()) with check (public.e_equipe());
 
 -- perfis e convites: só leitura direta; mudanças passam pelas funções abaixo
+-- semanas: a equipe lê e grava; o aluno lê o planejamento (não tem nada pessoal)
+drop policy if exists semanas_ler on public.semanas;
+create policy semanas_ler on public.semanas for select to authenticated
+  using (public.e_equipe() or (public.meu_papel() = 'aluno' and not apagado));
+drop policy if exists semanas_inserir on public.semanas;
+create policy semanas_inserir on public.semanas for insert to authenticated with check (public.e_equipe());
+drop policy if exists semanas_alterar on public.semanas;
+create policy semanas_alterar on public.semanas for update to authenticated
+  using (public.e_equipe()) with check (public.e_equipe());
+
+-- escala: só a equipe
+drop policy if exists escala_ler on public.escala;
+create policy escala_ler on public.escala for select to authenticated using (public.e_equipe());
+drop policy if exists escala_inserir on public.escala;
+create policy escala_inserir on public.escala for insert to authenticated with check (public.e_equipe());
+drop policy if exists escala_alterar on public.escala;
+create policy escala_alterar on public.escala for update to authenticated
+  using (public.e_equipe()) with check (public.e_equipe());
+
 drop policy if exists perfis_ler on public.perfis;
 create policy perfis_ler on public.perfis for select to authenticated
   using (usuario_id = auth.uid() or public.e_master());
@@ -214,10 +272,10 @@ create policy convites_ler on public.convites for select to authenticated
 -- Quem não entrou (anon) não acessa tabela nenhuma; quem entrou só faz o que a RLS deixa.
 -- As permissões são dadas aqui uma a uma, então o projeto pode (e deve) ficar com
 -- "Automatically expose new tables" desligado. O anon só usa o schema para a função ping.
-revoke all on public.turmas, public.nadadores, public.tempos, public.planos, public.perfis, public.convites from anon;
+revoke all on public.turmas, public.nadadores, public.tempos, public.planos, public.semanas, public.escala, public.perfis, public.convites from anon;
 grant usage on schema public to anon, authenticated;
-grant select, insert, update on public.turmas, public.nadadores, public.tempos, public.planos to authenticated;
-revoke delete on public.turmas, public.nadadores, public.tempos, public.planos from authenticated;
+grant select, insert, update on public.turmas, public.nadadores, public.tempos, public.planos, public.semanas, public.escala to authenticated;
+revoke delete on public.turmas, public.nadadores, public.tempos, public.planos, public.semanas, public.escala from authenticated;
 grant select on public.perfis, public.convites to authenticated;
 revoke insert, update, delete on public.perfis, public.convites from authenticated;
 

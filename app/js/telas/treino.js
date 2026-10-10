@@ -13,6 +13,8 @@ import { conteudoRepeticoes } from '../repeticoes.js';
 import { nuvemLigada } from '../nuvem.js';
 import { sincronizar, estadoSincronia, aoMudarEstado } from '../sincronia.js';
 import { doDia, repeticoes, statusNuvem } from '../resumo-dia.js';
+import { semanaDe, treinoDaTurma, professoresDaTurma, blocoTreino, temVcrit } from '../semana.js';
+import { vcritAtual, alvoVcrit } from '../vcrit.js';
 
 // Estado do cronômetro por turma. Fica na memória enquanto o app está aberto, então dá
 // para olhar outra tela e voltar sem perder quem está nadando.
@@ -67,6 +69,10 @@ export async function render(caixa, turmaId) {
   S.encerrados = new Set(guardados && guardados.data === dHoje ? guardados.ids : []);
   const salvarEncerrados = () => db.config.set(chaveEnc, { data: dHoje, ids: [...S.encerrados] });
   const planoHoje = (await db.planosDaTurma(turmaId)).find(p => p.data === dHoje);
+  const [semanas, escala] = await Promise.all([db.listarSemanas(), db.listarEscala()]);
+  const semana = semanaDe(semanas, dHoje);
+  const treinoHoje = treinoDaTurma(semana, t, dHoje);
+  const professores = professoresDaTurma(escala, t, dHoje);
 
   caixa.append(h('div', null, h('a', { class: 'voltar', href: `#/turma/${t.id}` }, `← ${t.nome}`)));
   caixa.append(h('div', { class: 'cabeca' },
@@ -75,7 +81,19 @@ export async function render(caixa, turmaId) {
       class: 'btn', type: 'button',
       onclick: () => abrirLancamento({ turmaId, nadadores: nads, dist: cfg.dist, estilo: cfg.estilo, aoSalvar: reg => { tempos.push(reg); pintarTodos(); listarSessao(); pintarEncerrados(); } })
     }, 'Lançar tempo à mão')) : null));
+  // Semana do planejamento e quem dá aula hoje neste horário
+  if (semana || professores) {
+    caixa.append(h('div', { class: 'linha contexto-treino' },
+      semana ? h('a', { class: 'etiqueta semana-link', href: `#/planejamento/${semana.numero}` },
+        `Semana ${semana.numero}${semana.periodo ? ` · ${semana.periodo}` : ''}${semana.conteudo ? ` · ${semana.conteudo}` : ''}`) : null,
+      professores ? h('span', { class: 'sub', text: `Professores: ${professores}` }) : null));
+  }
+  // Treino do dia: o escrito para esta turma e data manda; senão, o do planejamento da semana
   if (planoHoje) caixa.append(h('div', { class: 'card plano' }, h('span', { class: 'lbl', text: 'Treino planejado para hoje' }), h('p', { class: 'plano-texto', text: planoHoje.descricao })));
+  else if (treinoHoje) caixa.append(h('div', { class: 'card plano' }, h('span', { class: 'lbl', text: `Treino de hoje · semana ${semana.numero}` }), blocoTreino(treinoHoje, `Dia ${treinoHoje.dia}`)));
+  if (semana && temVcrit(semana)) {
+    caixa.append(h('p', { class: 'dica' }, h('b', { text: 'Semana de teste de Vcrit: ' }), 'cronometre 400 m e 200 m crawl no máximo. A Vcrit de cada aluno aparece na evolução dele.'));
+  }
 
   if (!nads.length) {
     caixa.append(h('div', { class: 'card vazio' },
@@ -187,6 +205,9 @@ export async function render(caixa, turmaId) {
     const seus = temposDe(id, d, e);
     const m = melhorDe(seus);
     c.melhor.textContent = m == null ? `sem tempo nos ${combo(d, e)}` : `melhor ${fmtTempo(m)}`;
+    // alvo no ritmo de Vcrit (só crawl, quando o nadador já tem teste)
+    const vc = e === 'crawl' ? vcritAtual(tempos.filter(r => r.nadadorId === id)) : null;
+    if (vc) c.melhor.textContent += ` · Vcrit ${fmtTempo(alvoVcrit(vc, d))}`;
     c.mini.textContent = '';
     const g = minigrafico(porTreino(seus).slice(-8));
     if (g) c.mini.append(g);

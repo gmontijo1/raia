@@ -3,7 +3,7 @@
 Cronômetro de beira de piscina e acompanhamento da evolução de nadadores.
 
 **Use agora:** https://gmontijo1.github.io/raia/ (funciona no celular, no tablet e no computador; pode
-ser instalado na tela inicial). **Status:** versão 0.6.0, em teste. Entrada com conta Google e um
+ser instalado na tela inicial). **Status:** versão 0.7.0, em teste. Entrada com conta Google e um
 código de convite.
 
 ## A ideia
@@ -25,14 +25,19 @@ histórico, com um gráfico de evolução para cada um.
 - Encerrar o treino de cada nadador (os dados do dia vão para a nuvem na hora) ou da turma toda,
   com um resumo do dia (repetições, recordes pessoais, melhor de cada um) para compartilhar no
   grupo da turma.
+- Planejamento do semestre: um nadador que avança pela raia conforme as semanas passam, o
+  gráfico de volume e intensidade por semana (colorido pelo período), os treinos de cada semana
+  (que aparecem sozinhos no treino do dia de cada turma) e a escala de professores.
+- Velocidade crítica (Vcrit) de cada aluno, calculada pelos tiros de 400 m e 200 m crawl, com o
+  tempo-alvo de cada distância no cartão do cronômetro.
 - Evolução de cada nadador, lançamento de tempo à mão, planilha para o Excel e cópia de segurança.
 - Funciona sem internet na beira da piscina; os tempos sobem para a nuvem quando há conexão, e
   todos os professores veem o mesmo histórico.
 - Menu na parte de baixo da tela, ao alcance do polegar, e o logo do projeto de natação no topo.
 
 **Alunos**
-- Veem só os próprios dados: os treinos da semana (datas e treino planejado), a evolução, cada
-  treino com as repetições e os tempos.
+- Veem só os próprios dados: os treinos da semana (datas e treino planejado), a evolução (com a
+  própria Vcrit), cada treino com as repetições e os tempos.
 
 **Coordenação (master)**
 - Convida professores e outros coordenadores, vê quem tem acesso e remove acessos.

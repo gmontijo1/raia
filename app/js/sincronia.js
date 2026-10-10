@@ -10,10 +10,17 @@ const TABELAS = [
   { nome: 'turmas', campos: { id: 'id', nome: 'nome', horario: 'horario', agenda: 'agenda', arquivada: 'arquivada', apagado: 'apagado', criadoEm: 'criado_em', atualizadoEm: 'atualizado_em' } },
   { nome: 'nadadores', campos: { id: 'id', turmaId: 'turma_id', nome: 'nome', arquivado: 'arquivado', apagado: 'apagado', criadoEm: 'criado_em', atualizadoEm: 'atualizado_em' } },
   { nome: 'tempos', campos: { id: 'id', turmaId: 'turma_id', nadadorId: 'nadador_id', data: 'data', dist: 'dist', estilo: 'estilo', t: 't', rep: 'rep', origem: 'origem', dispositivo: 'dispositivo', apagado: 'apagado', criadoEm: 'criado_em', atualizadoEm: 'atualizado_em' } },
-  { nome: 'planos', campos: { id: 'id', turmaId: 'turma_id', data: 'data', descricao: 'descricao', apagado: 'apagado', criadoEm: 'criado_em', atualizadoEm: 'atualizado_em' } }
+  { nome: 'planos', campos: { id: 'id', turmaId: 'turma_id', data: 'data', descricao: 'descricao', apagado: 'apagado', criadoEm: 'criado_em', atualizadoEm: 'atualizado_em' } },
+  // Opcionais: se a tabela ainda não existe na nuvem (esquema.sql antigo), são puladas sem
+  // travar o resto da sincronização.
+  { nome: 'semanas', opcional: true, campos: { id: 'id', semestre: 'semestre', numero: 'numero', inicio: 'inicio', periodo: 'periodo', conteudo: 'conteudo', volume: 'volume', intensidade: 'intensidade', extras: 'extras', treinos: 'treinos', apagado: 'apagado', criadoEm: 'criado_em', atualizadoEm: 'atualizado_em' } },
+  { nome: 'escala', opcional: true, campos: { id: 'id', dia: 'dia', hora: 'hora', professores: 'professores', apagado: 'apagado', criadoEm: 'criado_em', atualizadoEm: 'atualizado_em' } }
 ];
 // Valor usado quando o registro do aparelho não tem o campo (registros antigos).
-const PADRAO = { horario: null, agenda: [], arquivada: false, arquivado: false, apagado: false, rep: null, origem: 'cronometro', dispositivo: null };
+const PADRAO = { horario: null, agenda: [], arquivada: false, arquivado: false, apagado: false, rep: null, origem: 'cronometro', dispositivo: null, treinos: [], extras: null, periodo: null, conteudo: null, volume: null, intensidade: null };
+const NUMEROS = ['t', 'volume', 'intensidade'];   // numeric da nuvem pode chegar como texto
+// "tabela não existe" (PostgreSQL 42P01) ou fora do cache do PostgREST (PGRST205)
+const faltaTabela = e => e && (e.code === '42P01' || e.code === 'PGRST205' || /does not exist|schema cache/i.test(e.message || ''));
 const LOTE = 500;
 const FOLGA_MS = 5 * 60 * 1000;   // ao baixar, volta 5 min para pegar o que chegou fora de ordem
 
@@ -33,7 +40,7 @@ function doNuvem(tab, r) {
   for (const [local, remoto] of Object.entries(tab.campos)) o[local] = r[remoto];
   o.criadoEm = iso(o.criadoEm);
   o.atualizadoEm = iso(o.atualizadoEm);
-  if ('t' in o) o.t = Number(o.t);
+  for (const k of NUMEROS) if (k in o && o[k] != null) o[k] = Number(o[k]);
   return o;
 }
 
@@ -52,8 +59,19 @@ async function idsExemplo() {
 export async function contarPendentes() {
   const ex = await idsExemplo();
   let n = 0;
-  for (const tab of TABELAS) n += (await pendentesDe(tab, ex)).length;
+  for (const tab of TABELAS) if (!semTabela.has(tab.nome)) n += (await pendentesDe(tab, ex)).length;
   return n;
+}
+
+// Tabelas opcionais que a nuvem ainda não tem: não contam como pendentes até existirem.
+const semTabela = new Set();
+function falhou(tab, error) {
+  if (tab.opcional && faltaTabela(error)) {
+    if (!semTabela.has(tab.nome)) console.warn(`Sincronização: a tabela "${tab.nome}" ainda não existe na nuvem (rode o supabase/esquema.sql).`);
+    semTabela.add(tab.nome);
+    return true;
+  }
+  throw error;
 }
 
 async function enviar(tab, exemplos) {
@@ -61,7 +79,7 @@ async function enviar(tab, exemplos) {
   const lista = await pendentesDe(tab, exemplos);
   for (let i = 0; i < lista.length; i += LOTE) {
     const { error } = await sb().from(tab.nome).upsert(lista.slice(i, i + LOTE).map(o => paraNuvem(tab, o)), { onConflict: 'id' });
-    if (error) throw error;
+    if (error && falhou(tab, error)) return 0;
   }
   await db.config.set(`envio:${tab.nome}`, inicio);
   return lista.length;
@@ -75,7 +93,8 @@ async function receber(tab) {
   for (let de = 0; ; de += 1000) {
     const { data, error } = await sb().from(tab.nome).select('*')
       .gt('sincronizado_em', desde).order('sincronizado_em', { ascending: true }).range(de, de + 999);
-    if (error) throw error;
+    if (error && falhou(tab, error)) return 0;
+    semTabela.delete(tab.nome);
     if (!data.length) break;
     total += await db.mesclar(tab.nome, data.map(r => doNuvem(tab, r)));
     for (const r of data) maior = Math.max(maior, Date.parse(r.sincronizado_em));

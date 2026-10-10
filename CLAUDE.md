@@ -35,7 +35,29 @@ treino por raias sem pedido dele.
 
 ## Estado atual
 
-- **App v0.6.0 no ar (com login):** https://gmontijo1.github.io/raia/ (ver "Base do app" e "Publicação").
+- **App v0.7.0 no ar (com login):** https://gmontijo1.github.io/raia/ (ver "Base do app" e "Publicação").
+- **Coordenação aprovou (10/10/2026) e mandou a planilha real** (`privado/*.xlsx`: participantes,
+  periodização do semestre, treinos semanais, escala). Dados reais entram no app só pelo arquivo de
+  importação: `python privado/importar_planilha.py privado/<planilha>.xlsx privado/raia-importacao-<semestre>.json`
+  (ids estáveis com uuid5, `"tipo": "importacao"`) → no app, Dados → Restaurar cópia. A
+  importação carimba tudo como gravado agora, para a sincronização enviar. Sem lista de espera
+  (decisão do GÊ). Os tempos antigos dos alunos ainda não chegaram.
+- **Planejamento do semestre (v0.7.0):** menu "Semanas", `#/planejamento/<n>`
+  (`telas/planejamento.js`, lógica em `js/semana.js`). Uma linha por semana na tabela `semanas`
+  (período, conteúdo, volume e intensidade em fração de 4.500 m, extras, `treinos` = Dia 1/2/3),
+  igual para todas as turmas. Tela: a raia (nadador animado que avança com o semestre + barra das
+  semanas, ideia do GÊ), gráfico (barra clara = volume, cheia = volume × intensidade, traço = média
+  dos treinos escritos, ● Vcrit, ◆ avaliação; cores dos períodos `--fase-*` validadas para
+  daltonismo na ordem em que se sucedem), detalhe com os treinos, editor, índice e a **escala de
+  professores** (tabela `escala`: dia, hora, nomes). Na tela de treino: semana, professores do
+  horário e o treino do dia (o Dia N é o N-ésimo dia de aula da turma na semana; um plano escrito
+  para a data, `planos`, tem prioridade).
+- **Vcrit (v0.7.0, `js/vcrit.js`):** distâncias 200 e 400 m no cronômetro; Vcrit = 200 ÷ (t400 −
+  t200) com os melhores 400 e 200 crawl em até 14 dias (o 400 tem de ficar entre 2× e 2,8× o 200).
+  Aparece na evolução (professor e aluno) com o tempo-alvo por distância, e no cartão do treino
+  ("Vcrit 47,50" na distância escolhida, só crawl).
+- **Tabelas novas exigem rodar o `supabase/esquema.sql` de novo.** Até isso, a sincronização
+  pula `semanas` e `escala` (marcadas `opcional`) sem travar o resto.
 - **Fim do treino (v0.6.0, rodada 3 do Claude Design):** cada cartão do treino tem "Encerrar
   treino". Confirma, tira o nadador da lista de hoje (vai para "Treino encerrado", com "Reabrir")
   e chama `sincronizar()` na hora; a pílula mostra o estado real (`statusNuvem` em
@@ -53,10 +75,9 @@ treino por raias sem pedido dele.
   design system do Claude Design é sincronizado deste repositório (ver `.design-sync/NOTES.md`).
 - **Protótipo v1, dados fictícios:** `prototipo/raia-natacao.html`, publicado como Artifact em
   https://claude.ai/artifact/UyJ5x3KDjp6NZPqbAydNPw (para atualizar, publicar de novo nessa URL).
-- **O caderno registra só o tempo de 25 m e de 50 m de cada aluno.** Fotos do caderno e a planilha do
-  Excel ainda não estão disponíveis; isso só afeta a importação do histórico, não o resto do app.
-- **Próximo passo:** validar a ideia com a coordenação do projeto de natação (perguntas em
-  `privado/CONTEXTO.md`).
+- **O caderno registra só o tempo de 25 m e de 50 m de cada aluno.** Os tempos antigos ainda não
+  chegaram (o GÊ está vendo com a coordenação); quando chegarem, importar como `origem: 'importado'`.
+- **A equipe de competição** existe, mas não está na planilha: vira uma turma quando houver a lista.
 
 ## Base do app — pasta `app/`
 

@@ -1,7 +1,7 @@
 // Utilidades compartilhadas: montagem de DOM, tempos, datas e avisos.
 
 export const ESTILOS = ['crawl', 'costas', 'peito', 'borboleta'];
-export const DISTANCIAS = [25, 50, 100];
+export const DISTANCIAS = [25, 50, 100, 200, 400];
 export const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 export const DIAS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
 const MENOS = '−';

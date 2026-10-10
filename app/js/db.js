@@ -9,7 +9,7 @@
 import { novoId, agoraISO, porNome } from './util.js';
 
 const NOME = 'raia';
-const VERSAO = 2;
+const VERSAO = 3;
 let conexao = null;
 
 // Avisa o resto do app que algo foi gravado aqui (a sincronização escuta isso).
@@ -33,6 +33,10 @@ function abrir() {
       if (e.oldVersion < 2) {
         const planos = db.createObjectStore('planos', { keyPath: 'id' });
         planos.createIndex('turmaId', 'turmaId');
+      }
+      if (e.oldVersion < 3) {
+        db.createObjectStore('semanas', { keyPath: 'id' });
+        db.createObjectStore('escala', { keyPath: 'id' });
       }
     };
     req.onsuccess = () => {
@@ -147,6 +151,27 @@ export async function salvarPlano(turmaId, data, descricao) {
   return gravar('planos', { id: novoId(), criadoEm: agoraISO(), turmaId, data, descricao: texto, apagado: false });
 }
 
+/* ---------- planejamento: semanas do semestre (iguais para todas as turmas) ---------- */
+// semana: { semestre, numero, inicio (segunda-feira, AAAA-MM-DD), periodo, conteudo,
+//           volume e intensidade (0 a 1, sobre VOLUME_MAX), extras, treinos: [{ dia, aquecimento,
+//           aquecimentoObs, principal, principalObs, soltura, solturaObs, total }] }
+export async function listarSemanas() {
+  return (await todos('semanas')).filter(s => !s.apagado).sort((a, b) => a.inicio.localeCompare(b.inicio));
+}
+export function salvarSemana(s) {
+  return gravar('semanas', { id: novoId(), criadoEm: agoraISO(), apagado: false, treinos: [], ...s });
+}
+
+/* ---------- escala de professores: quem dá aula em cada dia e horário ---------- */
+// item: { dia: 0-6 (0 = domingo), hora: 'HH:MM', professores: 'Nome, Nome' }
+export async function listarEscala() {
+  return (await todos('escala')).filter(e => !e.apagado)
+    .sort((a, b) => a.dia - b.dia || String(a.hora).localeCompare(String(b.hora)));
+}
+export function salvarEscala(e) {
+  return gravar('escala', { id: novoId(), criadoEm: agoraISO(), apagado: false, ...e });
+}
+
 /* ---------- tempos ---------- */
 export async function temposDoNadador(nadadorId) {
   return (await todos('tempos', 'nadadorId', nadadorId)).filter(t => !t.apagado);
@@ -176,11 +201,11 @@ export async function contagem() {
 }
 
 /* ---------- cópia de segurança ---------- */
-const LOJAS_DADOS = ['turmas', 'nadadores', 'tempos', 'planos'];
+const LOJAS_DADOS = ['turmas', 'nadadores', 'tempos', 'planos', 'semanas', 'escala'];
 
 export async function exportarTudo() {
-  const [turmas, nadadores, tempos, planos] = await Promise.all(LOJAS_DADOS.map(n => todos(n)));
-  return { app: 'raia', formato: 2, exportadoEm: agoraISO(), dispositivo: await dispositivoId(), turmas, nadadores, tempos, planos };
+  const [turmas, nadadores, tempos, planos, semanas, escala] = await Promise.all(LOJAS_DADOS.map(n => todos(n)));
+  return { app: 'raia', formato: 3, exportadoEm: agoraISO(), dispositivo: await dispositivoId(), turmas, nadadores, tempos, planos, semanas, escala };
 }
 
 // Mescla registros com o que já existe: fica a versão mais recente de cada um (pelo
@@ -197,8 +222,12 @@ export async function importarTudo(b) {
   if (!b || b.app !== 'raia' || !Array.isArray(b.turmas) || !Array.isArray(b.nadadores) || !Array.isArray(b.tempos)) {
     throw new Error('Esse arquivo não é uma cópia de segurança do Raia.');
   }
+  // Arquivo de importação (dados novos tirados de uma planilha, não uma cópia de segurança):
+  // carimba como gravado agora, para a sincronização enviar tudo para a nuvem.
+  const agora = agoraISO();
+  const preparar = lista => (b.tipo === 'importacao' ? lista.map(o => ({ ...o, atualizadoEm: agora })) : lista);
   let total = 0;
-  for (const nome of LOJAS_DADOS) total += await mesclar(nome, b[nome] || []);
+  for (const nome of LOJAS_DADOS) total += await mesclar(nome, preparar(b[nome] || []));
   if (total) avisarMudanca();
   return total;
 }

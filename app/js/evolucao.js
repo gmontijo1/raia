@@ -5,6 +5,7 @@
 import { h, fmtTempo, combo, dec1, dataCurta, dataLonga, porTreino, combos, doCombo, botaoConfirmar } from './util.js';
 import { graficoEvolucao } from './grafico.js';
 import { bloco } from './repeticoes.js';
+import { cartaoVcrit } from './vcrit.js';
 
 const ORIGEM = { cronometro: 'cronômetro', manual: 'à mão', exemplo: 'exemplo', importado: 'importado' };
 
@@ -49,7 +50,7 @@ export function secaoEvolucao(tempos, nome, { aoApagar } = {}) {
       botao, tab));
     graficoEvolucao(host, pts, `${nome}, ${combo(d, e)}`);
   }
-  return [resumo, grade];
+  return [resumo, cartaoVcrit(tempos), grade].filter(Boolean);
 }
 
 function tabelaTempos(lista, melhor, aoApagar) {

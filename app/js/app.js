@@ -18,6 +18,7 @@ import * as dados from './telas/dados.js';
 import * as entrar from './telas/entrar.js';
 import * as aluno from './telas/aluno.js';
 import * as acessos from './telas/acessos.js';
+import * as planejamento from './telas/planejamento.js';
 import * as db from './db.js';
 import { criarTurmaExemplo } from './exemplo.js';
 import { nuvemLigada, sb, sessaoAtual, carregarPerfil, perfilGuardado, eMaster } from './nuvem.js';
@@ -30,6 +31,7 @@ const EQUIPE = [
   [/^#\/treino\/([\w-]+)$/, treino.render, 'turmas'],
   [/^#\/resumo\/([\w-]+)$/, resumo.render, 'turmas'],
   [/^#\/nadador\/([\w-]+)$/, nadador.render, 'turmas'],
+  [/^#\/planejamento(?:\/(\d+))?$/, planejamento.render, 'planejamento'],
   [/^#\/dados$/, dados.render, 'dados']
 ];
 const ROTAS = {
@@ -45,9 +47,9 @@ const ROTAS = {
 };
 const INICIO = { visitante: '#/entrar', 'sem-papel': '#/codigo' };
 const MENU = {
-  local: [['#/', 'turmas', 'Turmas'], ['#/dados', 'dados', 'Dados']],
-  equipe: [['#/', 'turmas', 'Turmas'], ['#/dados', 'dados', 'Dados']],
-  master: [['#/', 'turmas', 'Turmas'], ['#/acessos', 'acessos', 'Acessos'], ['#/dados', 'dados', 'Dados']],
+  local: [['#/', 'turmas', 'Turmas'], ['#/planejamento', 'planejamento', 'Semanas'], ['#/dados', 'dados', 'Dados']],
+  equipe: [['#/', 'turmas', 'Turmas'], ['#/planejamento', 'planejamento', 'Semanas'], ['#/dados', 'dados', 'Dados']],
+  master: [['#/', 'turmas', 'Turmas'], ['#/planejamento', 'planejamento', 'Semanas'], ['#/acessos', 'acessos', 'Acessos'], ['#/dados', 'dados', 'Dados']],
   aluno: [['#/', 'meus', 'Meus treinos']]
 };
 
