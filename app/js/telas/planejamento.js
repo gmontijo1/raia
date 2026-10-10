@@ -11,12 +11,13 @@ import {
   VOLUME_MAX, PERIODOS, semanaDe, progresso, tipoPeriodo, datasSemana, fimDaSemana, somarDias, fmtMetros, pct,
   volumeMetros, cargaMetros, mediaTreinos, extrasDe, temVcrit, temAvaliacao, blocoTreino
 } from '../semana.js';
+import { mediaPse, fmtPse } from '../pse.js';
 
 const ORDEM_DIAS = [1, 2, 3, 4, 5, 6, 0];   // segunda primeiro
 const segundaDe = iso => { const d = new Date(`${iso}T12:00:00`); return somarDias(iso, -((d.getDay() + 6) % 7)); };
 
 export async function render(caixa, numeroPedido) {
-  const [todas, escala] = await Promise.all([db.listarSemanas(), db.listarEscala()]);
+  const [todas, escala, pses] = await Promise.all([db.listarSemanas(), db.listarEscala(), db.todasPses()]);
   const dHoje = hoje();
   const atualGeral = semanaDe(todas, dHoje);
   const semestre = (atualGeral || todas[todas.length - 1] || {}).semestre;
@@ -98,13 +99,21 @@ export async function render(caixa, numeroPedido) {
       h('div', { class: 'blocos', style: 'margin-top:12px' },
         h('div', { class: 'bloco' }, h('span', { class: 'lbl', text: 'Volume' }), h('span', { class: 'v', text: vol != null ? fmtMetros(vol) : '–' }), h('span', { class: 'd', text: x.volume != null ? `${pct(x.volume)} de ${fmtMetros(VOLUME_MAX)}` : 'não definido' })),
         h('div', { class: 'bloco' }, h('span', { class: 'lbl', text: 'Intensidade' }), h('span', { class: 'v', text: x.intensidade != null ? pct(x.intensidade) : '–' }), h('span', { class: 'd', text: 'do máximo' })),
-        h('div', { class: 'bloco' }, h('span', { class: 'lbl', text: 'Treinos' }), h('span', { class: 'v', text: String((x.treinos || []).length) }), h('span', { class: 'd', text: media ? `média ${fmtMetros(media)}` : 'ainda não escritos' }))),
+        h('div', { class: 'bloco' }, h('span', { class: 'lbl', text: 'Treinos' }), h('span', { class: 'v', text: String((x.treinos || []).length) }), h('span', { class: 'd', text: media ? `média ${fmtMetros(media)}` : 'ainda não escritos' })),
+        // o que os alunos sentiram (PSE média de todas as turmas na semana) ao lado do planejado
+        (() => {
+          const daSemana = pses.filter(p => p.data >= x.inicio && p.data < somarDias(x.inicio, 7));
+          return h('div', { class: 'bloco' }, h('span', { class: 'lbl', text: 'PSE média' }),
+            h('span', { class: 'v', text: fmtPse(mediaPse(daSemana)) }),
+            h('span', { class: 'd', text: daSemana.length ? `${daSemana.length} ${daSemana.length === 1 ? 'resposta' : 'respostas'} dos alunos` : 'sem respostas' }));
+        })()),
       (x.treinos || []).length
         ? h('div', { class: 'treinos-semana' }, x.treinos.map(t => blocoTreino(t, `Dia ${t.dia}`)))
         : h('p', { class: 'sub', style: 'margin-top:12px', text: 'Os treinos desta semana ainda não foram escritos.' }),
       temVcrit(x) ? h('p', { class: 'dica', style: 'margin-top:12px' }, h('b', { text: 'Teste de Vcrit: ' }), 'cronometre 400 m e 200 m crawl no máximo (distâncias 400 m e 200 m no treino). A Vcrit de cada aluno aparece na evolução dele.') : null,
       h('div', { class: 'acoes', style: 'margin-top:14px' },
-        h('button', { class: 'btn', type: 'button', onclick: () => editarSemana(x) }, 'Editar semana')));
+        h('button', { class: 'btn', type: 'button', onclick: () => editarSemana(x) }, 'Editar semana'),
+        h('a', { class: 'btn fantasma', href: '#/pse' }, 'Escala de PSE')));
   }
 
   function pintarIndice() {

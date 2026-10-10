@@ -5,6 +5,7 @@ import * as db from '../db.js';
 import { VERSAO_APP } from '../versao.js';
 import { nuvemLigada, perfil, sair } from '../nuvem.js';
 import { sincronizar, aoMudarEstado, contarPendentes } from '../sincronia.js';
+import { planilhaPse } from '../pse.js';
 
 const PAPEL = { master: 'master', professor: 'professor' };
 
@@ -101,9 +102,14 @@ export async function render(caixa) {
   const msg = h('p', { class: 'sub', role: 'status' });
   caixa.append(h('div', { class: 'card' },
     h('h3', { text: 'Planilha para o Excel' }),
-    h('p', { class: 'dica', style: 'margin-top:8px', text: 'Todos os tempos, um por linha, com turma, nadador, data, distância e estilo.' }),
+    h('p', { class: 'dica', style: 'margin-top:8px', text: 'Tempos: um por linha, com turma, nadador, data, distância e estilo. PSE: uma linha por aluno e treino, com a duração e a carga (PSE × minutos).' }),
     h('div', { class: 'acoes', style: 'margin-top:12px' },
-      h('button', { class: 'btn primario', type: 'button', onclick: async () => { baixar(`raia-tempos-${hoje()}.csv`, await planilha(), 'text/csv;charset=utf-8'); msg.textContent = 'Planilha baixada. Abra o arquivo no Excel.'; } }, 'Baixar planilha'),
+      h('button', { class: 'btn primario', type: 'button', onclick: async () => { baixar(`raia-tempos-${hoje()}.csv`, await planilha(), 'text/csv;charset=utf-8'); msg.textContent = 'Planilha baixada. Abra o arquivo no Excel.'; } }, 'Baixar tempos'),
+      h('button', { class: 'btn', type: 'button', onclick: async () => {
+        const b = await db.exportarTudo();
+        baixar(`raia-pse-${hoje()}.csv`, planilhaPse(b.pse || [], b.turmas, b.nadadores), 'text/csv;charset=utf-8');
+        msg.textContent = 'Planilha da PSE baixada. Abra o arquivo no Excel.';
+      } }, 'Baixar PSE'),
       msg)));
 
   /* backup */

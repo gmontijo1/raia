@@ -7,8 +7,8 @@
 --
 -- Segurança (Row Level Security em todas as tabelas):
 --   aluno     → lê só o próprio cadastro, os próprios tempos, a agenda, os planos da turma e o
---               planejamento do semestre (semanas).
---   professor → lê e grava turmas, nadadores, tempos, planos, semanas e escala; gera códigos de aluno.
+--               planejamento do semestre (semanas); lê e grava só a própria PSE.
+--   professor → lê e grava turmas, nadadores, tempos, planos, semanas, escala e PSE; gera códigos de aluno.
 --   master    → tudo do professor + gera códigos de professor e master, vê e remove acessos.
 -- Quem entra com Google mas ainda não usou um código não vê nada.
 --
@@ -110,6 +110,25 @@ create table if not exists public.escala (
 );
 create index if not exists escala_sinc on public.escala (sincronizado_em);
 
+-- PSE (percepção subjetiva de esforço, 0 a 10) de um aluno num treino (v0.8.0). O id vem do
+-- aluno + data no aparelho, então professor e aluno respondendo no mesmo dia não duplicam.
+create table if not exists public.pse (
+  id               uuid primary key,
+  turma_id         uuid not null references public.turmas (id),
+  nadador_id       uuid not null references public.nadadores (id),
+  data             date not null,
+  valor            smallint not null check (valor between 0 and 10),
+  duracao          smallint check (duracao between 1 and 600),        -- minutos do treino
+  origem           text not null default 'professor' check (origem in ('professor', 'aluno')),
+  registrado_por   uuid default auth.uid(),
+  apagado          boolean not null default false,
+  criado_em        timestamptz not null default now(),
+  atualizado_em    timestamptz not null default now(),
+  sincronizado_em  timestamptz not null default now()
+);
+create index if not exists pse_nadador_data on public.pse (nadador_id, data);
+create index if not exists pse_sinc on public.pse (sincronizado_em);
+
 create index if not exists turmas_sinc on public.turmas (sincronizado_em);
 
 -- ---------------------------------------------------------------- acessos
@@ -161,6 +180,8 @@ drop trigger if exists carimbar on public.semanas;
 create trigger carimbar before insert or update on public.semanas for each row execute function public.carimbar();
 drop trigger if exists carimbar on public.escala;
 create trigger carimbar before insert or update on public.escala for each row execute function public.carimbar();
+drop trigger if exists carimbar on public.pse;
+create trigger carimbar before insert or update on public.pse for each row execute function public.carimbar();
 
 -- ---------------------------------------------------------------- quem é quem
 
@@ -199,6 +220,7 @@ alter table public.tempos    enable row level security;
 alter table public.planos    enable row level security;
 alter table public.semanas   enable row level security;
 alter table public.escala    enable row level security;
+alter table public.pse       enable row level security;
 alter table public.perfis    enable row level security;
 alter table public.convites  enable row level security;
 
@@ -262,6 +284,18 @@ drop policy if exists escala_alterar on public.escala;
 create policy escala_alterar on public.escala for update to authenticated
   using (public.e_equipe()) with check (public.e_equipe());
 
+-- PSE: a equipe lê e grava tudo; o aluno lê e grava só a própria (e só na própria turma)
+drop policy if exists pse_ler on public.pse;
+create policy pse_ler on public.pse for select to authenticated
+  using (public.e_equipe() or (nadador_id = public.meu_nadador() and not apagado));
+drop policy if exists pse_inserir on public.pse;
+create policy pse_inserir on public.pse for insert to authenticated
+  with check (public.e_equipe() or (nadador_id = public.meu_nadador() and turma_id = public.minha_turma() and origem = 'aluno'));
+drop policy if exists pse_alterar on public.pse;
+create policy pse_alterar on public.pse for update to authenticated
+  using (public.e_equipe() or nadador_id = public.meu_nadador())
+  with check (public.e_equipe() or (nadador_id = public.meu_nadador() and turma_id = public.minha_turma() and origem = 'aluno'));
+
 drop policy if exists perfis_ler on public.perfis;
 create policy perfis_ler on public.perfis for select to authenticated
   using (usuario_id = auth.uid() or public.e_master());
@@ -272,10 +306,10 @@ create policy convites_ler on public.convites for select to authenticated
 -- Quem não entrou (anon) não acessa tabela nenhuma; quem entrou só faz o que a RLS deixa.
 -- As permissões são dadas aqui uma a uma, então o projeto pode (e deve) ficar com
 -- "Automatically expose new tables" desligado. O anon só usa o schema para a função ping.
-revoke all on public.turmas, public.nadadores, public.tempos, public.planos, public.semanas, public.escala, public.perfis, public.convites from anon;
+revoke all on public.turmas, public.nadadores, public.tempos, public.planos, public.semanas, public.escala, public.pse, public.perfis, public.convites from anon;
 grant usage on schema public to anon, authenticated;
-grant select, insert, update on public.turmas, public.nadadores, public.tempos, public.planos, public.semanas, public.escala to authenticated;
-revoke delete on public.turmas, public.nadadores, public.tempos, public.planos, public.semanas, public.escala from authenticated;
+grant select, insert, update on public.turmas, public.nadadores, public.tempos, public.planos, public.semanas, public.escala, public.pse to authenticated;
+revoke delete on public.turmas, public.nadadores, public.tempos, public.planos, public.semanas, public.escala, public.pse from authenticated;
 grant select on public.perfis, public.convites to authenticated;
 revoke insert, update, delete on public.perfis, public.convites from authenticated;
 

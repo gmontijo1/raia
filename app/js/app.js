@@ -19,6 +19,7 @@ import * as entrar from './telas/entrar.js';
 import * as aluno from './telas/aluno.js';
 import * as acessos from './telas/acessos.js';
 import * as planejamento from './telas/planejamento.js';
+import * as escalaPse from './telas/escala-pse.js';
 import * as db from './db.js';
 import { criarTurmaExemplo } from './exemplo.js';
 import { nuvemLigada, sb, sessaoAtual, carregarPerfil, perfilGuardado, eMaster } from './nuvem.js';
@@ -32,6 +33,7 @@ const EQUIPE = [
   [/^#\/resumo\/([\w-]+)$/, resumo.render, 'turmas'],
   [/^#\/nadador\/([\w-]+)$/, nadador.render, 'turmas'],
   [/^#\/planejamento(?:\/(\d+))?$/, planejamento.render, 'planejamento'],
+  [/^#\/pse$/, escalaPse.render, 'planejamento'],
   [/^#\/dados$/, dados.render, 'dados']
 ];
 const ROTAS = {
@@ -40,7 +42,8 @@ const ROTAS = {
   master: [...EQUIPE, [/^#\/acessos$/, acessos.render, 'acessos']],
   aluno: [
     [/^#\/?$/, aluno.render, 'meus'],
-    [/^#\/meu-treino\/(\d{4}-\d{2}-\d{2})$/, aluno.renderTreino, 'meus']
+    [/^#\/meu-treino\/(\d{4}-\d{2}-\d{2})$/, aluno.renderTreino, 'meus'],
+    [/^#\/pse$/, escalaPse.render, 'meus']
   ],
   visitante: [[/^#\/entrar$/, entrar.render, '']],
   'sem-papel': [[/^#\/codigo$/, entrar.renderCodigo, '']]

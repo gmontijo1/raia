@@ -1,12 +1,13 @@
 // Tela do nadador (professor): evolução, histórico de tempos, cadastro e código de acesso.
 
-import { h, aviso, fmtTempo, mesAno, naoEncontrado, botaoConfirmar, dataCurta, isoLocal } from '../util.js';
+import { h, aviso, fmtTempo, mesAno, naoEncontrado, botaoConfirmar, dataCurta, dataLonga, isoLocal } from '../util.js';
 import * as db from '../db.js';
 import { abrirLancamento } from '../lancar.js';
 import { secaoEvolucao } from '../evolucao.js';
 import { nuvemLigada, criarConvite, convitesPendentes, cancelarConvite, formatarCodigo, explicar } from '../nuvem.js';
 import { sincronizar } from '../sincronia.js';
 import { caixaCodigo } from '../convite.js';
+import { cartaoPse, perguntarPse } from '../pse.js';
 
 export async function render(caixa, nadadorId) {
   const n = await db.nadador(nadadorId);
@@ -37,6 +38,18 @@ export async function render(caixa, nadadorId) {
       h('p', { text: 'Os tempos aparecem aqui assim que forem marcados no treino ou lançados à mão.' }),
       h('a', { class: 'btn primario', href: `#/treino/${n.turmaId}` }, 'Ir para o treino')));
   }
+
+  // PSE dos treinos (tocar num registro corrige ou apaga)
+  const pse = cartaoPse(await db.psesDoNadador(nadadorId), {
+    aoEditar: async p => {
+      const resp = await perguntarPse({ titulo: `PSE de ${n.nome} · ${dataLonga(p.data)}`, valor: p.valor, duracao: p.duracao, botao: 'Salvar PSE', apagar: true });
+      if (!resp) return;
+      await db.salvarPse({ turmaId: p.turmaId, nadadorId: n.id, data: p.data, valor: resp === 'apagar' ? null : resp.valor, duracao: resp.duracao ?? p.duracao, origem: 'professor' });
+      aviso(resp === 'apagar' ? 'PSE apagada.' : 'PSE salva.');
+      recarregar();
+    }
+  });
+  if (pse) caixa.append(pse);
 
   if (nuvemLigada() && !(t && t.exemplo) && !n.arquivado) caixa.append(cartaoAcesso(n));
 

@@ -9,7 +9,7 @@
 import { novoId, agoraISO, porNome } from './util.js';
 
 const NOME = 'raia';
-const VERSAO = 3;
+const VERSAO = 4;
 let conexao = null;
 
 // Avisa o resto do app que algo foi gravado aqui (a sincronização escuta isso).
@@ -37,6 +37,11 @@ function abrir() {
       if (e.oldVersion < 3) {
         db.createObjectStore('semanas', { keyPath: 'id' });
         db.createObjectStore('escala', { keyPath: 'id' });
+      }
+      if (e.oldVersion < 4) {
+        const pse = db.createObjectStore('pse', { keyPath: 'id' });
+        pse.createIndex('nadadorId', 'nadadorId');
+        pse.createIndex('turmaId', 'turmaId');
       }
     };
     req.onsuccess = () => {
@@ -172,6 +177,36 @@ export function salvarEscala(e) {
   return gravar('escala', { id: novoId(), criadoEm: agoraISO(), apagado: false, ...e });
 }
 
+/* ---------- PSE: percepção subjetiva de esforço do treino (0 a 10), uma por aluno por dia ---------- */
+// O id sai do aluno + data (o mesmo em qualquer aparelho): professor e aluno respondendo no
+// mesmo dia não duplicam; fica a resposta mais recente.
+export async function idPse(nadadorId, data) {
+  const bytes = new Uint8Array(await crypto.subtle.digest('SHA-1', new TextEncoder().encode(`pse|${nadadorId}|${data}`))).slice(0, 16);
+  bytes[6] = (bytes[6] & 0x0f) | 0x50;   // formato de UUID versão 5
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const x = [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
+  return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}`;
+}
+export async function psesDaTurma(turmaId) {
+  return (await todos('pse', 'turmaId', turmaId)).filter(p => !p.apagado);
+}
+export async function psesDoNadador(nadadorId) {
+  return (await todos('pse', 'nadadorId', nadadorId)).filter(p => !p.apagado);
+}
+export async function todasPses() {
+  return (await todos('pse')).filter(p => !p.apagado);
+}
+// valor null apaga a PSE daquele dia.
+export async function salvarPse({ turmaId, nadadorId, data, valor, duracao = null, origem = 'professor' }) {
+  const id = await idPse(nadadorId, data);
+  const existente = await um('pse', id);
+  if (valor == null) return existente ? gravar('pse', { ...existente, apagado: true }) : null;
+  return gravar('pse', {
+    criadoEm: agoraISO(), ...(existente || {}), id, turmaId, nadadorId, data,
+    valor, duracao, origem, apagado: false
+  });
+}
+
 /* ---------- tempos ---------- */
 export async function temposDoNadador(nadadorId) {
   return (await todos('tempos', 'nadadorId', nadadorId)).filter(t => !t.apagado);
@@ -201,11 +236,11 @@ export async function contagem() {
 }
 
 /* ---------- cópia de segurança ---------- */
-const LOJAS_DADOS = ['turmas', 'nadadores', 'tempos', 'planos', 'semanas', 'escala'];
+const LOJAS_DADOS = ['turmas', 'nadadores', 'tempos', 'planos', 'semanas', 'escala', 'pse'];
 
 export async function exportarTudo() {
-  const [turmas, nadadores, tempos, planos, semanas, escala] = await Promise.all(LOJAS_DADOS.map(n => todos(n)));
-  return { app: 'raia', formato: 3, exportadoEm: agoraISO(), dispositivo: await dispositivoId(), turmas, nadadores, tempos, planos, semanas, escala };
+  const [turmas, nadadores, tempos, planos, semanas, escala, pse] = await Promise.all(LOJAS_DADOS.map(n => todos(n)));
+  return { app: 'raia', formato: 4, exportadoEm: agoraISO(), dispositivo: await dispositivoId(), turmas, nadadores, tempos, planos, semanas, escala, pse };
 }
 
 // Mescla registros com o que já existe: fica a versão mais recente de cada um (pelo

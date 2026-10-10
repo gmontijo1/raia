@@ -15,6 +15,7 @@ import { sincronizar, estadoSincronia, aoMudarEstado } from '../sincronia.js';
 import { doDia, repeticoes, statusNuvem } from '../resumo-dia.js';
 import { semanaDe, treinoDaTurma, professoresDaTurma, blocoTreino, temVcrit } from '../semana.js';
 import { vcritAtual, alvoVcrit } from '../vcrit.js';
+import { perguntarPse, chipPse, DURACAO_PADRAO } from '../pse.js';
 
 // Estado do cronômetro por turma. Fica na memória enquanto o app está aberto, então dá
 // para olhar outra tela e voltar sem perder quem está nadando.
@@ -68,6 +69,9 @@ export async function render(caixa, turmaId) {
   const guardados = await db.config.get(chaveEnc, null);
   S.encerrados = new Set(guardados && guardados.data === dHoje ? guardados.ids : []);
   const salvarEncerrados = () => db.config.set(chaveEnc, { data: dHoje, ids: [...S.encerrados] });
+  // PSE de hoje (uma por aluno) e a duração da aula desta turma (a última usada)
+  const psesHoje = new Map((await db.psesDaTurma(turmaId)).filter(p => p.data === dHoje).map(p => [p.nadadorId, p]));
+  let duracaoAula = await db.config.get(`duracao:${turmaId}`, DURACAO_PADRAO);
   const planoHoje = (await db.planosDaTurma(turmaId)).find(p => p.data === dHoje);
   const [semanas, escala] = await Promise.all([db.listarSemanas(), db.listarEscala()]);
   const semana = semanaDe(semanas, dHoje);
@@ -415,13 +419,17 @@ export async function render(caixa, turmaId) {
     if (S.rodando.has(id) || S.encerrados.has(id)) return;
     const n = porId.get(id);
     const d = doDia(tempos, id, dHoje);
-    const ok = await perguntar({
-      titulo: `Encerrar o treino de ${n.nome}?`,
+    // Ao encerrar, o professor pergunta a PSE ao aluno e toca no número (pode pular).
+    const resp = await perguntarPse({
+      titulo: `Encerrar o treino de ${n.nome}`,
       texto: `${d.reps ? `${repeticoes(d.reps)} hoje, melhor ${fmtTempo(d.melhor)}.` : 'Nenhuma repetição hoje.'} ` +
-        (vaiParaNuvem() ? 'Os dados do dia vão para a nuvem.' : 'Os dados do dia ficam salvos neste aparelho.'),
-      botao: 'Encerrar e salvar'
+        (vaiParaNuvem() ? 'Os dados do dia vão para a nuvem.' : 'Os dados do dia ficam salvos neste aparelho.') +
+        ' Pergunte ao aluno a PSE do treino:',
+      valor: psesHoje.get(id)?.valor ?? null, duracao: duracaoAula,
+      botao: 'Encerrar e salvar', semPse: 'Encerrar sem PSE'
     });
-    if (!ok || S.rodando.has(id)) return;
+    if (!resp || S.rodando.has(id)) return;
+    if (resp.valor != null) await gravarPse(id, resp);
     if (painelId === id) fecharPainel();
     S.encerrados.add(id);
     await salvarEncerrados();
@@ -465,17 +473,40 @@ export async function render(caixa, turmaId) {
     else aviso(`${oque} encerrado e salvo no aparelho. O app tenta enviar de novo sozinho.`);
   }
 
+  async function gravarPse(id, resp) {
+    const p = await db.salvarPse({ turmaId, nadadorId: id, data: dHoje, valor: resp.valor, duracao: resp.duracao, origem: 'professor' });
+    if (p && !p.apagado) psesHoje.set(id, p); else psesHoje.delete(id);
+    if (resp.duracao) { duracaoAula = resp.duracao; await db.config.set(`duracao:${turmaId}`, resp.duracao); }
+  }
+
+  // PSE de quem já encerrou (marcar depois, corrigir ou apagar)
+  async function marcarPse(id) {
+    const atual = psesHoje.get(id);
+    const resp = await perguntarPse({
+      titulo: `PSE de ${porId.get(id).nome} · hoje`, valor: atual?.valor ?? null,
+      duracao: atual?.duracao ?? duracaoAula, botao: 'Salvar PSE', apagar: !!atual
+    });
+    if (!resp) return;
+    await gravarPse(id, resp === 'apagar' ? { valor: null } : resp);
+    pintarEncerrados();
+    if (vaiParaNuvem()) sincronizar();
+  }
+
   function pintarEncerrados() {
     const lista = nads.filter(n => S.encerrados.has(n.id));
     const s = statusNuvem(t);
     listaEnc.textContent = '';
     for (const n of lista) {
       const d = doDia(tempos, n.id, dHoje);
+      const p = psesHoje.get(n.id);
       listaEnc.append(h('div', { class: 'atleta encerrado' },
         h('div', { class: 'at-info' },
           h('span', { class: 'at-nome', text: n.nome }),
           h('span', { class: 'at-melhor', text: d.reps ? `${repeticoes(d.reps)} · melhor hoje ${fmtTempo(d.melhor)}` : 'Sem repetições' }),
-          h('button', { class: 'link', type: 'button', 'aria-label': `Reabrir o treino de ${n.nome}`, onclick: () => reabrir(n.id) }, 'Reabrir')),
+          h('div', { class: 'linha encerrado-acoes' },
+            h('button', { class: 'link pse-marcar', type: 'button', 'aria-label': p ? `PSE ${p.valor}: mudar a PSE de ${n.nome}` : `Marcar a PSE de ${n.nome}`, onclick: () => marcarPse(n.id) },
+              p ? ['PSE ', chipPse(p.valor)] : 'Marcar PSE'),
+            h('button', { class: 'link', type: 'button', 'aria-label': `Reabrir o treino de ${n.nome}`, onclick: () => reabrir(n.id) }, 'Reabrir'))),
         h('span', { class: 'sincronia', 'data-fase': s.fase, title: s.frase }, s.texto)));
     }
     secEnc.hidden = !lista.length;

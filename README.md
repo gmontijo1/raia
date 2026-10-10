@@ -30,6 +30,9 @@ histórico, com um gráfico de evolução para cada um.
   (que aparecem sozinhos no treino do dia de cada turma) e a escala de professores.
 - Velocidade crítica (Vcrit) de cada aluno, calculada pelos tiros de 400 m e 200 m crawl, com o
   tempo-alvo de cada distância no cartão do cronômetro.
+- PSE (percepção subjetiva de esforço, 0 a 10) de cada aluno em cada treino: marcada ao encerrar
+  o treino ou respondida pelo próprio aluno, com a carga (PSE × minutos), a média da semana ao
+  lado da intensidade planejada e a planilha para o Excel.
 - Evolução de cada nadador, lançamento de tempo à mão, planilha para o Excel e cópia de segurança.
 - Funciona sem internet na beira da piscina; os tempos sobem para a nuvem quando há conexão, e
   todos os professores veem o mesmo histórico.
@@ -37,7 +40,8 @@ histórico, com um gráfico de evolução para cada um.
 
 **Alunos**
 - Veem só os próprios dados: os treinos da semana (datas e treino planejado), a evolução (com a
-  própria Vcrit), cada treino com as repetições e os tempos.
+  própria Vcrit e a PSE), cada treino com as repetições e os tempos.
+- Respondem a PSE de cada treino no próprio celular, pela escala do projeto.
 
 **Coordenação (master)**
 - Convida professores e outros coordenadores, vê quem tem acesso e remove acessos.

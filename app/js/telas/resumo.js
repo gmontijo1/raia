@@ -7,6 +7,9 @@ import { aoMudarEstado } from '../sincronia.js';
 import { NOME_PROJETO } from '../marca.js';
 import { resumoTurma, detalheLinha, statusNuvem } from '../resumo-dia.js';
 import { textoResumo, prepararImagem, compartilhar } from '../compartilhar.js';
+import { perguntarPse, chipPse, mediaPse, fmtPse, DURACAO_PADRAO } from '../pse.js';
+import { nuvemLigada } from '../nuvem.js';
+import { sincronizar } from '../sincronia.js';
 
 export async function render(caixa, turmaId) {
   const t = await db.turma(turmaId);
@@ -53,6 +56,40 @@ export async function render(caixa, turmaId) {
         h('b', { text: l.nadador.nome }),
         h('span', { class: 'sub', text: detalheLinha(l) }),
         h('span', { class: 'lado', text: l.melhor != null ? fmtTempo(l.melhor) : '–' })))))));
+
+  /* PSE do treino: a média da turma e a de cada aluno (marcar quem ficou faltando) */
+  const psesHoje = new Map((await db.psesDaTurma(turmaId)).filter(p => p.data === data).map(p => [p.nadadorId, p]));
+  let duracaoAula = await db.config.get(`duracao:${turmaId}`, DURACAO_PADRAO);
+  const cartaoPseTurma = h('div', { class: 'card' });
+  caixa.append(cartaoPseTurma);
+  const pintarPse = () => {
+    const respostas = res.linhas.map(l => psesHoje.get(l.nadador.id)).filter(Boolean);
+    const media = mediaPse(respostas);
+    cartaoPseTurma.textContent = '';
+    cartaoPseTurma.append(
+      h('div', { class: 'card-head' }, h('h3', { text: 'PSE do treino' }), h('a', { class: 'link', href: '#/pse' }, 'Ver a escala')),
+      h('p', { class: 'sub', style: 'margin-top:4px', text: respostas.length
+        ? `Média ${fmtPse(media)} · ${respostas.length} de ${res.linhas.length} ${res.linhas.length === 1 ? 'aluno respondeu' : 'alunos responderam'}`
+        : 'Ninguém marcou a PSE ainda. Toque no aluno para marcar.' }),
+      h('ul', { class: 'lista', style: 'margin-top:4px' }, res.linhas.map(l => {
+        const p = psesHoje.get(l.nadador.id);
+        return h('li', null, h('button', { class: 'item item-pse', type: 'button', onclick: () => marcar(l.nadador) },
+          h('b', { text: l.nadador.nome }),
+          h('span', { class: 'lado' }, p ? chipPse(p.valor) : h('span', { class: 'link', text: 'Marcar' })),
+          h('span', { class: 'sub', text: p ? (p.origem === 'aluno' ? 'respondida pelo aluno' : 'marcada pelo professor') : 'sem PSE' })));
+      })));
+  };
+  async function marcar(n) {
+    const atual = psesHoje.get(n.id);
+    const resp = await perguntarPse({ titulo: `PSE de ${n.nome} · ${dataLonga(data)}`, valor: atual?.valor ?? null, duracao: atual?.duracao ?? duracaoAula, botao: 'Salvar PSE', apagar: !!atual });
+    if (!resp) return;
+    const p = await db.salvarPse({ turmaId, nadadorId: n.id, data, valor: resp === 'apagar' ? null : resp.valor, duracao: resp.duracao ?? null, origem: 'professor' });
+    if (p && !p.apagado) psesHoje.set(n.id, p); else psesHoje.delete(n.id);
+    if (resp.duracao) { duracaoAula = resp.duracao; await db.config.set(`duracao:${turmaId}`, resp.duracao); }
+    pintarPse();
+    if (nuvemLigada() && !t.exemplo) sincronizar();
+  }
+  pintarPse();
 
   /* onde estão os dados */
   const frase = h('span', { class: 'sub' });

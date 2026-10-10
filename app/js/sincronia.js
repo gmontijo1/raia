@@ -14,7 +14,8 @@ const TABELAS = [
   // Opcionais: se a tabela ainda não existe na nuvem (esquema.sql antigo), são puladas sem
   // travar o resto da sincronização.
   { nome: 'semanas', opcional: true, campos: { id: 'id', semestre: 'semestre', numero: 'numero', inicio: 'inicio', periodo: 'periodo', conteudo: 'conteudo', volume: 'volume', intensidade: 'intensidade', extras: 'extras', treinos: 'treinos', apagado: 'apagado', criadoEm: 'criado_em', atualizadoEm: 'atualizado_em' } },
-  { nome: 'escala', opcional: true, campos: { id: 'id', dia: 'dia', hora: 'hora', professores: 'professores', apagado: 'apagado', criadoEm: 'criado_em', atualizadoEm: 'atualizado_em' } }
+  { nome: 'escala', opcional: true, campos: { id: 'id', dia: 'dia', hora: 'hora', professores: 'professores', apagado: 'apagado', criadoEm: 'criado_em', atualizadoEm: 'atualizado_em' } },
+  { nome: 'pse', opcional: true, campos: { id: 'id', turmaId: 'turma_id', nadadorId: 'nadador_id', data: 'data', valor: 'valor', duracao: 'duracao', origem: 'origem', apagado: 'apagado', criadoEm: 'criado_em', atualizadoEm: 'atualizado_em' } }
 ];
 // Valor usado quando o registro do aparelho não tem o campo (registros antigos).
 const PADRAO = { horario: null, agenda: [], arquivada: false, arquivado: false, apagado: false, rep: null, origem: 'cronometro', dispositivo: null, treinos: [], extras: null, periodo: null, conteudo: null, volume: null, intensidade: null };

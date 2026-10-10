@@ -56,8 +56,17 @@ treino por raias sem pedido dele.
   t200) com os melhores 400 e 200 crawl em até 14 dias (o 400 tem de ficar entre 2× e 2,8× o 200).
   Aparece na evolução (professor e aluno) com o tempo-alvo por distância, e no cartão do treino
   ("Vcrit 47,50" na distância escolhida, só crawl).
+- **PSE (v0.8.0, pedido da coordenação):** escala de 0 a 10 do projeto (`js/pse.js`, `NIVEIS_PSE`,
+  copiada da imagem de referência; página `#/pse`). Uma resposta por aluno por dia na tabela `pse`,
+  com id determinístico (`db.idPse`, SHA-1 de aluno + data em formato UUID v5): professor e aluno
+  respondendo no mesmo dia não duplicam, vale a última. Professor marca ao encerrar o treino
+  (`perguntarPse`, dá para pular), na lista "Treino encerrado", no resumo do treino e na tela do
+  nadador (corrigir/apagar). Aluno responde em "Meus treinos" (treinos dos últimos 7 dias sem PSE),
+  direto na nuvem (RLS: só a própria, `origem = 'aluno'`). Carga = PSE × duração (min, padrão 50,
+  lembrada por turma). Aparece no histórico do aluno, na PSE média da semana no planejamento e na
+  planilha "Baixar PSE" (tela Dados).
 - **Tabelas novas exigem rodar o `supabase/esquema.sql` de novo.** Até isso, a sincronização
-  pula `semanas` e `escala` (marcadas `opcional`) sem travar o resto.
+  pula `semanas`, `escala` e `pse` (marcadas `opcional`) sem travar o resto; o aluno também.
 - **Fim do treino (v0.6.0, rodada 3 do Claude Design):** cada cartão do treino tem "Encerrar
   treino". Confirma, tira o nadador da lista de hoje (vai para "Treino encerrado", com "Reabrir")
   e chama `sincronizar()` na hora; a pílula mostra o estado real (`statusNuvem` em
