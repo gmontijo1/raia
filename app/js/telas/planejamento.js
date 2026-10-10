@@ -144,7 +144,8 @@ function cartaoRaia(semanas, p, dHoje, aoEscolher) {
   const texto = p.indice < 0 ? `O semestre começa em ${dataCurta(semanas[0].inicio)}.`
     : p.indice >= n ? 'Semestre concluído.'
       : `Semana ${numero} de ${n}: ${pct(p.fracaoSemestre)} do semestre.`;
-  const agua = h('div', { class: 'raia-agua', role: 'img', 'aria-label': texto }, h('span', { class: 'raia-linha', 'aria-hidden': 'true' }), nadador);
+  const agua = h('div', { class: 'raia-agua', role: 'img', 'aria-label': texto },
+    h('span', { class: 'raia-brilho', 'aria-hidden': 'true' }), h('span', { class: 'raia-linha', 'aria-hidden': 'true' }), nadador);
   // O nadador sai da borda e nada até onde o semestre está.
   nadador.style.setProperty('--pos', '0');
   requestAnimationFrame(() => requestAnimationFrame(() => nadador.style.setProperty('--pos', String(p.fracaoSemestre))));
@@ -169,18 +170,32 @@ function cartaoRaia(semanas, p, dHoje, aoEscolher) {
   return { el, aoIndice: fn => botaoIndice.addEventListener('click', fn) };
 }
 
-// Nadador de crawl visto de lado, metade dentro d'água. Os braços giram, as pernas batem.
-const SVG_NADADOR = `<svg viewBox="0 0 72 36" width="72" height="36" focusable="false">
-  <g class="nad-corpo">
-    <path class="nad-perna p1" d="M20 19 L6 17"/>
-    <path class="nad-perna p2" d="M20 19 L6 21"/>
-    <path class="nad-tronco" d="M20 19 L44 18"/>
-    <g class="nad-braco b1"><path d="M42 17 L42 4"/></g>
-    <g class="nad-braco b2"><path d="M42 17 L42 4"/></g>
-    <circle class="nad-cabeca" cx="51" cy="16" r="6"/>
+// Nadador de crawl visto de cima, como a raia: touca amarela, os braços se alternando (um vai à
+// frente enquanto o outro puxa por baixo do corpo e volta por fora), pernada com espuma, onda
+// na frente da cabeça e rastro atrás. Tudo em CSS (raia.css); com 'reduzir movimento', fica parado.
+const SVG_NADADOR = `<svg viewBox="0 0 104 44" width="104" height="44" focusable="false" aria-hidden="true">
+  <g class="nad-esteira">
+    <path d="M26 12.5 Q12 9 -8 8"/>
+    <path d="M26 31.5 Q12 35 -8 36"/>
   </g>
-  <path class="nad-agua" d="M-72 21 q9 -4 18 0 t18 0 t18 0 t18 0 t18 0 t18 0 t18 0 t18 0 V36 H-72 Z"/>
-  <path class="nad-esteira" d="M2 18 q-4 2 -1 5 M8 24 q-3 1 -6 0"/>
+  <g class="nad-espuma">
+    <circle class="e1" cx="14" cy="18.5" r="2.6"/>
+    <circle class="e2" cx="10" cy="25" r="2.2"/>
+    <circle class="e3" cx="16" cy="26.5" r="1.7"/>
+    <circle class="e4" cx="6" cy="21" r="1.6"/>
+  </g>
+  <g class="nad-corpo">
+    <path class="nad-perna p1" d="M39 19.4 L18 18.6"/>
+    <path class="nad-perna p2" d="M39 24.6 L18 25.4"/>
+    <g class="nad-braco b1"><path d="M60.5 14.6 L82 14.6"/><ellipse cx="83.5" cy="14.6" rx="3" ry="2.4"/></g>
+    <g class="nad-braco b2"><path d="M60.5 29.4 L82 29.4"/><ellipse cx="83.5" cy="29.4" rx="3" ry="2.4"/></g>
+    <path class="nad-tronco" d="M38 17.2 C46 16.2 53.5 13.2 60 13.2 C63.2 13.2 65.4 16 65.8 18.6 L65.8 25.4 C65.4 28 63.2 30.8 60 30.8 C53.5 30.8 46 27.8 38 26.8 Q35.4 22 38 17.2 Z"/>
+    <path class="nad-sunga" d="M37.4 17.3 C40 17 42.2 16.7 44.6 16.4 L44.6 27.6 C42.2 27.3 40 27 37.4 26.7 Q34.9 22 37.4 17.3 Z"/>
+    <path class="nad-costas" d="M47 22 L60 22"/>
+    <circle class="nad-touca" cx="72.2" cy="22" r="6.8"/>
+    <path class="nad-touca-brilho" d="M68.6 18 Q72 16.2 75.6 18"/>
+  </g>
+  <path class="nad-proa" d="M82 12.5 Q90.5 22 82 31.5"/>
 </svg>`;
 
 /* ---------------------------------------------------------------- o gráfico */
