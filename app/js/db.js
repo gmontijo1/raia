@@ -272,22 +272,24 @@ export const todosDe = nome => todos(nome);
 
 // Só para a turma de exemplo: remove de vez (são dados inventados, não precisam de histórico).
 export async function apagarTurmaDeVez(turmaId) {
-  const [nads, temps, plans] = await Promise.all([todos('nadadores', 'turmaId', turmaId), todos('tempos', 'turmaId', turmaId), todos('planos', 'turmaId', turmaId)]);
+  const [nads, temps, plans, pses] = await Promise.all([todos('nadadores', 'turmaId', turmaId), todos('tempos', 'turmaId', turmaId), todos('planos', 'turmaId', turmaId), todos('pse', 'turmaId', turmaId)]);
   const db = await abrir();
   return new Promise((ok, falha) => {
-    const tx = db.transaction(['turmas', 'nadadores', 'tempos', 'planos'], 'readwrite');
+    const tx = db.transaction(['turmas', 'nadadores', 'tempos', 'planos', 'pse'], 'readwrite');
     tx.objectStore('turmas').delete(turmaId);
     nads.forEach(n => tx.objectStore('nadadores').delete(n.id));
     temps.forEach(t => tx.objectStore('tempos').delete(t.id));
     plans.forEach(p => tx.objectStore('planos').delete(p.id));
+    pses.forEach(p => tx.objectStore('pse').delete(p.id));
     tx.oncomplete = () => ok();
     tx.onerror = () => falha(tx.error);
   });
 }
-export async function gravarExemplo(turma, nadadores, tempos) {
+export async function gravarExemplo(turma, nadadores, tempos, pses = []) {
   await gravarVarios('turmas', [turma]);
   await gravarVarios('nadadores', nadadores);
   await gravarVarios('tempos', tempos);
+  await gravarVarios('pse', pses);
 }
 
 /* ---------- armazenamento protegido (o navegador não apaga sozinho) ---------- */
