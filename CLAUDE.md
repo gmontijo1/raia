@@ -42,6 +42,15 @@ treino por raias sem pedido dele.
   (ids estáveis com uuid5, `"tipo": "importacao"`) → no app, Dados → Restaurar cópia. A
   importação carimba tudo como gravado agora, para a sincronização enviar. Sem lista de espera
   (decisão do GÊ). Os tempos antigos dos alunos ainda não chegaram.
+- **Tempos brutos dos alunos (preparado em 10/10/2026, aguardando a coordenação):**
+  `privado/importar_tempos.py` (precisa do `openpyxl`, instalado com `pip --user`). `modelo
+  <alunos.json> <saida.xlsx>` gera o modelo de Excel com os alunos já listados (aba "Tempos": uma
+  linha por tempo; Data, Aluno, Distância, Estilo, Tempo em texto, Observação; listas suspensas). A
+  outra forma (`<planilha.xlsx> <saida.json>`) lê a aba "Tempos" e gera só tempos (`origem:
+  "importado"`, ids uuid5 por aluno+data+prova+repetição). Não regrava turmas nem alunos. Aceita
+  "42,35", "1:05,20", número e hora do Excel ("1:05" vira 1 min 5 s). Casa nomes sem acento e com
+  erro pequeno (avisa) e descarta velocidade fora de 0,4–2,2 m/s (avisa). Se a coordenação mandar
+  no formato dela, adaptar a leitura (o cabeçalho é achado pelo nome das colunas).
 - **Planejamento do semestre (v0.7.0):** menu "Semanas", `#/planejamento/<n>`
   (`telas/planejamento.js`, lógica em `js/semana.js`). Uma linha por semana na tabela `semanas`
   (período, conteúdo, volume e intensidade em fração de 4.500 m, extras, `treinos` = Dia 1/2/3),
