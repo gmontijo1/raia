@@ -5,7 +5,7 @@
 
 import { h, s, dataCurta, dataLonga, dec1, isoLocal } from './util.js';
 import { semanaDe, treinoDaTurma, pct } from './semana.js';
-import { mediaPse, fmtPse } from './pse.js';
+import { mediaPse, fmtPse, corPse } from './pse.js';
 
 const RX_PSE = /PSE\s*[-:]?\s*(\d{1,2})(?:\s*[-–a]\s*(\d{1,2}))?/i;
 const dentro = v => v >= 0 && v <= 10;
@@ -99,6 +99,7 @@ export function cartaoEsforco({ pses, turmas, semanas, fixo = null }) {
 
     const host = h('div', { class: 'grafico grafico-esforco' });
     const balao = h('div', { class: 'balao', hidden: true });
+    const nota = h('p', { class: 'dica-eixo', hidden: true });
     host.append(balao);
     corpo.append(
       h('div', { class: 'legenda' },
@@ -106,9 +107,15 @@ export function cartaoEsforco({ pses, turmas, semanas, fixo = null }) {
         h('span', { class: 'leg-item' }, h('span', { class: 'leg-ponto-pse' }), 'PSE média do treino'),
         h('span', { class: 'leg-item' }, h('span', { class: 'leg-bigode' }), 'da menor à maior resposta')),
       host,
-      h('p', { class: 'dica-eixo', text: 'PSE de 0 a 10. Ponto abaixo da faixa: os alunos sentiram o treino mais leve que o planejado; acima: mais pesado. O planejado vem da PSE escrita no treino do dia ou, sem ela, da intensidade da semana × 10.' }),
+      nota,
+      h('p', { class: 'dica-eixo', text: 'PSE de 0 a 10. A bolinha tem a média da PSE do treino, na cor da escala. Abaixo da faixa: os alunos sentiram o treino mais leve que o planejado; acima: mais pesado. O planejado vem da PSE escrita no treino do dia ou, sem ela, da intensidade da semana × 10.' }),
       tabela(lista));
-    const desenhar = () => desenharEsforco(host, balao, lista.slice(-30));
+    // cabem só os últimos treinos (cada bolinha precisa de espaço para o número); o resto fica na tabela
+    const desenhar = () => {
+      const mostrados = desenharEsforco(host, balao, lista);
+      nota.hidden = mostrados >= lista.length;
+      nota.textContent = `Mostrando os últimos ${mostrados} de ${lista.length} treinos. Todos estão na tabela abaixo.`;
+    };
     desenhar();
     if (ro) ro.disconnect();
     if ('ResizeObserver' in window) {
@@ -142,13 +149,16 @@ function tabela(lista) {
 }
 
 /* ---------- o gráfico ---------- */
-function desenharEsforco(host, balao, lista) {
+// Devolve quantos treinos (os mais recentes) couberam no gráfico.
+function desenharEsforco(host, balao, todos) {
   host.querySelector('svg')?.remove();
   balao.hidden = true;   // redesenhou (ex.: girou a tela): o balão antigo ficaria fora do lugar
-  const W = Math.max(280, host.clientWidth || 340), H = 200;
-  const m = { l: 28, r: 8, t: 10, b: 28 };
+  const W = Math.max(280, host.clientWidth || 340), H = 220;
+  const m = { l: 28, r: 8, t: 18, b: 30 };
   const pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const lista = todos.slice(-Math.max(4, Math.floor(pw / 30)));
   const n = lista.length, banda = pw / Math.max(n, 1);
+  const raio = Math.min(13, Math.max(7, banda * 0.42));
   const y = v => m.t + ph - (v / 10) * ph;
   const xc = i => m.l + banda * (i + 0.5);
   const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'img', 'aria-label': `PSE média de ${n} treinos comparada com o planejado. Os números estão na tabela abaixo do gráfico.` });
@@ -170,7 +180,16 @@ function desenharEsforco(host, balao, lista) {
   if (n > 1) svg.append(s('polyline', { points: lista.map((x, i) => `${xc(i)},${y(x.media)}`).join(' '), class: 'g-pse-linha' }));
   lista.forEach((x, i) => {
     if (x.max > x.min) svg.append(s('line', { x1: xc(i), x2: xc(i), y1: y(x.max), y2: y(x.min), class: 'g-bigode' }));
-    svg.append(s('circle', { cx: xc(i), cy: y(x.media), r: 5, class: 'g-pse-ponto' }));
+  });
+  // bolinha na cor da escala de PSE, com a média escrita dentro
+  lista.forEach((x, i) => {
+    const { cor, tinta } = corPse(x.media);
+    svg.append(s('circle', { cx: xc(i), cy: y(x.media), r: raio, class: 'g-pse-ponto', style: `fill:${cor}` }));
+    if (raio >= 10) {
+      const t = s('text', { x: xc(i), y: y(x.media), class: 'g-pse-num', 'text-anchor': 'middle', 'dominant-baseline': 'central', style: `fill:${tinta}` });
+      t.textContent = fmtPse(x.media);
+      svg.append(t);
+    }
   });
   // datas embaixo (algumas, sem encavalar)
   const passo = Math.max(1, Math.ceil(n / Math.max(1, Math.floor(pw / 46))));
@@ -204,6 +223,7 @@ function desenharEsforco(host, balao, lista) {
     svg.append(alvo);
   });
   host.prepend(svg);
+  return n;
 }
 
 /* ---------- planilha das médias (separador ";", vírgula decimal) ---------- */

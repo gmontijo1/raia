@@ -443,13 +443,14 @@ a.mvp-nome:hover { color: var(--accent); }
 /* acompanhamento do esforço: planejado × PSE média */
 .grafico-esforco { min-height: 200px; }
 .grafico-esforco svg { overflow: visible; }
-.g-plano { fill: var(--axis); fill-opacity: .45; }
-.g-pse-linha { fill: none; stroke: var(--series); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-.g-bigode { stroke: var(--series); stroke-width: 2; stroke-opacity: .35; stroke-linecap: round; }
-.g-pse-ponto { fill: var(--series); stroke: var(--surface); stroke-width: 2; }
-.leg-faixa { width: 14px; height: 10px; border-radius: 3px; background: var(--axis); opacity: .6; }
-.leg-ponto-pse { width: 10px; height: 10px; border-radius: 50%; background: var(--series); }
-.leg-bigode { width: 2px; height: 12px; border-radius: 1px; background: var(--series); opacity: .45; }
+.g-plano { fill: var(--ink-2); fill-opacity: .28; }
+.g-pse-linha { fill: none; stroke: var(--ink-2); stroke-opacity: .5; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.g-bigode { stroke: var(--ink-2); stroke-width: 2; stroke-opacity: .4; stroke-linecap: round; }
+.g-pse-ponto { stroke: var(--surface); stroke-width: 2.5; }
+.g-pse-num { font: 700 10.5px var(--font-mono); pointer-events: none; }
+.leg-faixa { width: 14px; height: 10px; border-radius: 3px; background: var(--ink-2); opacity: .32; }
+.leg-ponto-pse { width: 14px; height: 14px; border-radius: 50%; background: linear-gradient(135deg, var(--pse-1), var(--pse-4) 45%, var(--pse-7) 70%, var(--pse-10)); }
+.leg-bigode { width: 2px; height: 12px; border-radius: 1px; background: var(--ink-2); opacity: .5; }
 .lista-texto { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; color: var(--ink-2); font-size: 14px; }
 
 /* ---------- painel do nadador (repetições de hoje) ---------- */

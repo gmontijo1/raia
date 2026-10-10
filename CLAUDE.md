@@ -70,7 +70,7 @@ treino por raias sem pedido dele.
   Planejado de um treino = a faixa "PSE x-y" escrita na parte principal do treino do dia (ex.:
   "PSE-6-8") ou, sem ela, intensidade da semana × 10. Cartão "Esforço: planejado × PSE" na tela
   Semanas (filtro Todas / cada turma) e na tela da turma: resumo de 4 semanas (média, planejado,
-  diferença; |dif| < 0,5 = "dentro do planejado"), gráfico (faixa cinza = planejado, ponto azul =
+  diferença; |dif| < 0,5 = "dentro do planejado"), gráfico (faixa cinza = planejado, bolinha na cor da escala de PSE com a média dentro =
   média, traço = menor→maior resposta), tabela; planilha "Baixar médias por treino" (Dados).
 - **Painel da semana da turma (v0.10.0, `js/painel-turma.js`, topo da tela da turma):** semana =
   segunda a domingo, setas ‹ › (começa na atual; se ela não tem tempo, na última que tem).

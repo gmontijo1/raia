@@ -22,6 +22,11 @@ export const NIVEIS_PSE = [
 const TOM = { 0: 0, 1: 1, 2: 1, 3: 3, 4: 4, 5: 5, 6: 5, 7: 7, 8: 7, 9: 9, 10: 10 };
 export const nivelDe = v => NIVEIS_PSE.find(n => n.valores.includes(v)) || null;
 export const estiloPse = v => `--cor:var(--pse-${TOM[v]});--tinta:var(--pse-${TOM[v]}-tinta)`;
+// Cor de um valor qualquer (ex.: uma média 6,8 usa a cor do 7)
+export function corPse(v) {
+  const t = TOM[Math.max(0, Math.min(10, Math.round(v)))];
+  return { cor: `var(--pse-${t})`, tinta: `var(--pse-${t}-tinta)` };
+}
 export const chipPse = v => h('span', { class: 'pse-chip', style: estiloPse(v), title: `PSE ${v}: ${nivelDe(v).nome}` }, String(v));
 export const mediaPse = lista => (lista.length ? lista.reduce((s, p) => s + p.valor, 0) / lista.length : null);
 export const cargaPse = p => (p.duracao ? p.valor * p.duracao : null);
