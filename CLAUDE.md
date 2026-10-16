@@ -35,7 +35,7 @@ treino por raias sem pedido dele.
 
 ## Estado atual
 
-- **App v0.7.0 no ar (com login):** https://gmontijo1.github.io/raia/ (ver "Base do app" e "Publicação").
+- **App v0.13.0 no ar (com login):** https://projetonatacao.com.br/ (ver "Base do app" e "Publicação").
 - **Coordenação aprovou (10/10/2026) e mandou a planilha real** (`privado/*.xlsx`: participantes,
   periodização do semestre, treinos semanais, escala). Dados reais entram no app só pelo arquivo de
   importação: `python privado/importar_planilha.py privado/<planilha>.xlsx privado/raia-importacao-<semestre>.json`
@@ -161,7 +161,13 @@ do Edge não serve: ele termina antes de o IndexedDB responder.
 
 GitHub Pages, publicado sozinho pelo workflow `.github/workflows/publicar.yml` a cada push na `main`
 que mexe em `app/` (ou manualmente em Actions → Publicar app → Run workflow). Só a pasta `app/` vai
-para o site. Endereço: https://gmontijo1.github.io/raia/
+para o site. Endereço: **https://projetonatacao.com.br/** (domínio próprio desde 16/10/2026, comprado
+pelo GÊ no registro.br, DNS do próprio registro.br: 4 registros A para os IPs do GitHub Pages e `www`
+CNAME para `gmontijo1.github.io`; domínio configurado no Pages pela API, `cname`). O endereço antigo
+https://gmontijo1.github.io/raia/ redireciona para o novo. Os dados do app no aparelho (IndexedDB)
+são por endereço: quem usava o antigo começa vazio no novo e recebe da nuvem ao entrar. No Supabase,
+Authentication → URL Configuration tem o domínio novo como Site URL e nas Redirect URLs (o login
+volta para `location.origin + location.pathname`). O link dos convites fica em `js/convite.js`.
 
 ## Nuvem, login e papéis (v0.4.0)
 

@@ -2,8 +2,8 @@
 
 Cronômetro de beira de piscina e acompanhamento da evolução de nadadores.
 
-**Use agora:** https://gmontijo1.github.io/raia/ (funciona no celular, no tablet e no computador; pode
-ser instalado na tela inicial). **Status:** versão 0.7.0, em teste. Entrada com conta Google e um
+**Use agora:** https://projetonatacao.com.br/ (funciona no celular, no tablet e no computador; pode
+ser instalado na tela inicial). **Status:** versão 0.12, em teste. Entrada com conta Google e um
 código de convite.
 
 ## A ideia
@@ -57,5 +57,5 @@ Deixe a janela aberta enquanto usa e feche quando terminar.
 
 ## Privacidade
 
-Veja https://gmontijo1.github.io/raia/privacidade.html. Cada aluno vê só os próprios dados, e essa
+Veja https://projetonatacao.com.br/privacidade.html. Cada aluno vê só os próprios dados, e essa
 regra fica no próprio banco de dados. Este repositório guarda só código e dados de exemplo.

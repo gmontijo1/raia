@@ -3,7 +3,7 @@
 import { h, aviso, dataCurta, isoLocal } from './util.js';
 import { formatarCodigo } from './nuvem.js';
 
-const ENDERECO = 'https://gmontijo1.github.io/raia/';
+const ENDERECO = 'https://projetonatacao.com.br/';
 const TIPO = { aluno: 'aluno', professor: 'professor', master: 'master' };
 
 export function mensagemConvite(codigo, papel, expiraEm) {
