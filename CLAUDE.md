@@ -43,7 +43,9 @@ treino por raias sem pedido dele.
   importação carimba tudo como gravado agora, para a sincronização enviar. Sem lista de espera
   (decisão do GÊ). Os tempos antigos dos alunos ainda não chegaram.
 - **Sem histórico (16/10/2026):** os tempos antigos só existem no caderno, então a coordenação
-  decidiu começar a evolução dos alunos do zero no app. A 1ª semana com tempos é o "ponto de
+  decidiu começar a evolução dos alunos do zero no app. **"Do zero" vale só para os tempos:** turmas,
+  alunos, planejamento das semanas (com os gráficos) e escala continuam valendo como foram
+  importados da planilha. A 1ª semana com tempos é o "ponto de
   partida" no painel da turma (recordes com "–", porque pedem um tempo anterior). O importador
   abaixo fica guardado caso apareça algum histórico no futuro.
 - **Tempos brutos dos alunos (preparado em 10/10/2026, não usado):**
