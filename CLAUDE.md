@@ -44,7 +44,7 @@ treino por raias sem pedido dele.
   (decisão do GÊ). Os tempos antigos dos alunos ainda não chegaram.
 - **Sem histórico (16/10/2026):** os tempos antigos só existem no caderno, então a coordenação
   decidiu começar a evolução dos alunos do zero no app. A 1ª semana com tempos é o "ponto de
-  partida" no painel da turma (sem MVP nem recordes, que pedem um tempo anterior). O importador
+  partida" no painel da turma (recordes com "–", porque pedem um tempo anterior). O importador
   abaixo fica guardado caso apareça algum histórico no futuro.
 - **Tempos brutos dos alunos (preparado em 10/10/2026, não usado):**
   `privado/importar_tempos.py` (precisa do `openpyxl`, instalado com `pip --user`). `modelo
@@ -89,11 +89,10 @@ treino por raias sem pedido dele.
   segunda a domingo, setas ‹ › (começa na atual; se ela não tem tempo, na última que tem).
   Evolução de um aluno na semana = % que o melhor da semana ficou abaixo do melhor anterior à
   semana, na mesma prova (vale a prova em que mais melhorou; 1º tempo numa prova não conta).
-  **MVP** = maior evolução (desempate: recordes, depois repetições); sem melhora, sem MVP. Pódio
-  dos 3 maiores, "mais dedicação" (mais repetições), números da semana (alunos, repetições,
-  recordes, PSE média × planejado), gráfico "Evolução da turma" (média de quanto cada aluno está
-  mais rápido que na 1ª semana dele, na prova mais nadada; tocar numa semana leva a ela) e a
-  tabela de cada aluno. O MVP da semana atual também aparece no cartão da turma na lista.
+  Números da semana (alunos, repetições, recordes, PSE média × planejado), gráfico "Evolução da
+  turma" (média de quanto cada aluno está mais rápido que na 1ª semana dele, na prova mais nadada;
+  tocar numa semana leva a ela) e a tabela de cada aluno. **MVP, pódio e "mais dedicação" saíram
+  na v0.12.0 (16/10/2026):** o GÊ achou firula e quer o painel básico. Não reintroduzir sem ele pedir.
 - **Tabelas novas exigem rodar o `supabase/esquema.sql` de novo.** Até isso, a sincronização
   pula `semanas`, `escala` e `pse` (marcadas `opcional`) sem travar o resto; o aluno também.
 - **Fim do treino (v0.6.0, rodada 3 do Claude Design):** cada cartão do treino tem "Encerrar

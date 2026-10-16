@@ -2,7 +2,7 @@
 // Fica só neste aparelho (nunca sobe para a nuvem) e alimenta tudo o que o app mostra:
 // - 12 semanas de treinos (terças e quintas, 12h) até ontem, com faltas de vez em quando;
 // - repetições de 50 m crawl (3 a 6 por treino), 25 m crawl e 50 m costas, melhorando aos poucos
-//   (painel da semana, MVP, pódio, evolução, resumo);
+//   (painel da semana, evolução, resumo);
 // - testes de Vcrit (400 m e 200 m crawl) nas semanas que o planejamento marca como teste;
 // - PSE de cada aluno em cada treino, perto do esforço planejado (gráfico planejado × PSE).
 // O planejamento e a escala são os do app (não são criados nem alterados aqui).

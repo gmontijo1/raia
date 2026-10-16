@@ -1,17 +1,15 @@
-// Painel da semana de uma turma: MVP da semana, pódio das maiores evoluções, os números da semana,
-// a evolução da turma semana a semana e a semana de cada aluno.
+// Painel da semana de uma turma: os números da semana, a evolução da turma semana a semana e a
+// semana de cada aluno. (Sem MVP nem pódio: a coordenação quis o painel básico, 16/10/2026.)
 //
 // Regras (para explicar à coordenação):
 // - Semana = segunda a domingo (a mesma do planejamento).
 // - Evolução de um aluno na semana = quanto o melhor tempo dele na semana ficou abaixo do melhor
 //   tempo que ele tinha antes da semana, na mesma prova (distância + estilo), em %. Vale a prova em
 //   que ele mais melhorou. Primeiro tempo numa prova não conta (não há com o que comparar).
-// - MVP = maior evolução da semana (desempate: mais recordes pessoais, depois mais repetições).
-//   Se ninguém melhorou, não há MVP naquela semana.
 // - Evolução da turma = média de quanto cada aluno está mais rápido que na 1ª semana dele, na prova
 //   principal da turma (a mais nadada).
 
-import { h, s, fmtTempo, combo, combos, doCombo, melhorDe, dataCurta, dec1, hoje } from './util.js';
+import { h, s, combo, combos, doCombo, melhorDe, dataCurta, hoje } from './util.js';
 import { semanaDe, datasSemana, somarDias } from './semana.js';
 import { fmtPse } from './pse.js';
 import { sessoes, comSinal } from './esforco.js';
@@ -53,14 +51,10 @@ export function resumoSemana({ tempos, nadadores, pses, semanas, turma, inicio }
       pse: pseDoAluno.length ? pseDoAluno.reduce((a, p) => a + p.valor, 0) / pseDoAluno.length : null
     });
   }
-  const evoluiram = alunos.filter(a => a.melhor && a.melhor.pct > 0)
-    .sort((a, b) => b.melhor.pct - a.melhor.pct || b.recordes - a.recordes || b.reps - a.reps);
   const ses = sessoes(pses.filter(p => naSemana(p.data, inicio)), [turma], semanas, { turmaId: turma.id });
   const comPlano = ses.filter(x => x.planejado);
   return {
     inicio, semana: semanaDe(semanas, inicio), alunos,
-    mvp: evoluiram[0] || null, podio: evoluiram.slice(0, 3),
-    dedicacao: alunos.slice().sort((a, b) => b.reps - a.reps || b.dias - a.dias)[0] || null,
     treinos: new Set(daSemana.map(r => r.data)).size, reps: daSemana.length,
     recordes: alunos.reduce((a, x) => a + x.recordes, 0),
     pseMedia: ses.length ? ses.reduce((a, x) => a + x.media, 0) / ses.length : null,
@@ -86,11 +80,6 @@ export function evolucaoSemanal(tempos, [d, e]) {
     }
     return { inicio: w, valor: vals.reduce((a, b) => a + b, 0) / vals.length, n: vals.length };
   });
-}
-
-// MVP da semana atual (para a lista de turmas). null se não houver.
-export function mvpDaSemana(tempos, nadadores, inicio = segundaDe(hoje())) {
-  return resumoSemana({ tempos, nadadores, pses: [], semanas: [], turma: { id: null }, inicio }).mvp;
 }
 
 /* ---------------------------------------------------------------- o painel */
@@ -128,28 +117,6 @@ export function painelDaTurma({ turma, tempos, nadadores, pses, semanas }) {
     } else {
       // ninguém tinha tempo anterior nas provas da semana: é o ponto de partida (1ª semana da turma)
       const partida = !r.alunos.some(a => a.melhor);
-      /* MVP */
-      if (r.mvp) {
-        const m = r.mvp;
-        el.append(h('div', { class: 'card mvp' },
-          h('div', { class: 'mvp-medalha', 'aria-hidden': 'true' }, h('span', { text: 'MVP' })),
-          h('div', { class: 'mvp-texto' },
-            h('span', { class: 'lbl', text: 'MVP da semana' }),
-            h('a', { class: 'mvp-nome', href: `#/nadador/${m.nadador.id}`, text: m.nadador.nome }),
-            h('span', { class: 'sub', text: `${dec1(m.melhor.pct)}% mais rápido nos ${combo(m.melhor.dist, m.melhor.estilo)}: ${fmtTempo(m.melhor.antes)} → ${fmtTempo(m.melhor.agora)}` }),
-            h('div', { class: 'linha', style: 'margin-top:4px' },
-              h('span', { class: 'chip recorde', text: `${m.recordes} ${m.recordes === 1 ? 'recorde pessoal' : 'recordes pessoais'}` }),
-              h('span', { class: 'chip neutro', text: `${m.reps} ${m.reps === 1 ? 'repetição' : 'repetições'}` }),
-              h('span', { class: 'chip neutro', text: `${m.dias} ${m.dias === 1 ? 'treino' : 'treinos'}` })))));
-      } else {
-        el.append(h('div', { class: 'card mvp sem-mvp' },
-          h('div', { class: 'mvp-medalha', 'aria-hidden': 'true' }, h('span', { text: 'MVP' })),
-          h('div', { class: 'mvp-texto' }, h('span', { class: 'lbl', text: 'MVP da semana' }),
-            h('b', { class: 'mvp-nome', text: partida ? 'Semana do ponto de partida' : 'Ninguém bateu o próprio recorde' }),
-            h('span', { class: 'sub', text: partida
-              ? 'Estes são os primeiros tempos de cada aluno. A partir da próxima semana, o MVP é quem mais melhorar o próprio tempo.'
-              : 'O MVP é quem mais melhora o próprio melhor tempo na semana.' }))));
-      }
 
       /* números da semana */
       el.append(h('div', { class: 'blocos' },
@@ -157,24 +124,6 @@ export function painelDaTurma({ turma, tempos, nadadores, pses, semanas }) {
         bloco('Repetições', String(r.reps), 'cronometradas na semana'),
         bloco('Recordes pessoais', partida ? '–' : String(r.recordes), partida ? 'primeiros tempos, sem comparação' : r.recordes ? 'batidos na semana' : 'nenhum nesta semana', r.recordes ? 'bom' : null),
         bloco('PSE média', fmtPse(r.pseMedia), r.pseMedia == null ? 'sem respostas' : r.planejado != null ? `planejado ${fmtPse(r.planejado)}` : 'sem planejado')));
-
-      /* pódio e dedicação */
-      if (r.podio.length) {
-        const ordem = [r.podio[1], r.podio[0], r.podio[2]];
-        el.append(h('div', { class: 'card' },
-          h('h3', { text: 'Maiores evoluções' }),
-          h('div', { class: 'podio' }, ordem.map((a, i) => {
-            const lugar = [2, 1, 3][i];
-            if (!a) return h('div', { class: `podio-lugar p${lugar} vazio` });
-            return h('div', { class: `podio-lugar p${lugar}` },
-              h('a', { class: 'podio-nome', href: `#/nadador/${a.nadador.id}`, text: a.nadador.nome }),
-              h('span', { class: 'podio-v', text: pctTxt(a.melhor.pct) }),
-              h('span', { class: 'podio-prova', text: combo(a.melhor.dist, a.melhor.estilo) }),
-              h('div', { class: 'podio-degrau' }, h('span', { class: 'podio-medalha', text: `${lugar}º` })));
-          })),
-          r.dedicacao ? h('p', { class: 'sub', style: 'margin-top:12px' }, h('b', { text: 'Mais dedicação: ' }),
-            `${r.dedicacao.nadador.nome}, ${r.dedicacao.reps} ${r.dedicacao.reps === 1 ? 'repetição' : 'repetições'} em ${r.dedicacao.dias} ${r.dedicacao.dias === 1 ? 'treino' : 'treinos'}.`) : null));
-      }
     }
 
     /* evolução da turma semana a semana */

@@ -41,7 +41,7 @@ export async function render(caixa, turmaId) {
         h('button', { class: 'btn fantasma', type: 'button', 'aria-expanded': 'false', onclick: e => { edicao.hidden = !edicao.hidden; e.currentTarget.setAttribute('aria-expanded', String(!edicao.hidden)); } }, 'Editar turma'))),
     edicao);
 
-  /* painel da semana: MVP, pódio, números e evolução da turma */
+  /* painel da semana: números e evolução da turma */
   const painel = tempos.length || pses.length ? painelDaTurma({ turma: t, tempos, nadadores: [...nads, ...arquivados], pses, semanas }) : null;
   if (painel) caixa.append(painel.el);
   caixa.append(cartaoAgenda(t, planos, recarregar));
