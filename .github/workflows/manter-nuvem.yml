@@ -1,11 +1,14 @@
-# Visita diária ao banco do Supabase. No plano gratuito, o projeto "dorme" depois de
-# 7 dias sem uso; esta chamada simples (função ping) mantém ele acordado.
+# Visita ao banco do Supabase, 3 vezes por dia. No plano gratuito, o projeto "dorme" quando a
+# semana tem pouco uso de verdade; a função ping grava uma linha no banco (tabela batimento).
+# Uma visita só por dia, só lendo, não bastou: o projeto dormiu em 15/10/2026.
 # Lê o endereço e a chave PÚBLICA de app/js/config.js (a mesma que o app usa).
 name: Manter nuvem acordada
 
 on:
   schedule:
     - cron: '17 10 * * *'
+    - cron: '17 16 * * *'
+    - cron: '17 22 * * *'
   workflow_dispatch:
 
 permissions:

@@ -42,7 +42,11 @@ treino por raias sem pedido dele.
   (ids estáveis com uuid5, `"tipo": "importacao"`) → no app, Dados → Restaurar cópia. A
   importação carimba tudo como gravado agora, para a sincronização enviar. Sem lista de espera
   (decisão do GÊ). Os tempos antigos dos alunos ainda não chegaram.
-- **Tempos brutos dos alunos (preparado em 10/10/2026, aguardando a coordenação):**
+- **Sem histórico (16/10/2026):** os tempos antigos só existem no caderno, então a coordenação
+  decidiu começar a evolução dos alunos do zero no app. A 1ª semana com tempos é o "ponto de
+  partida" no painel da turma (sem MVP nem recordes, que pedem um tempo anterior). O importador
+  abaixo fica guardado caso apareça algum histórico no futuro.
+- **Tempos brutos dos alunos (preparado em 10/10/2026, não usado):**
   `privado/importar_tempos.py` (precisa do `openpyxl`, instalado com `pip --user`). `modelo
   <alunos.json> <saida.xlsx>` gera o modelo de Excel com os alunos já listados (aba "Tempos": uma
   linha por tempo; Data, Aluno, Distância, Estilo, Tempo em texto, Observação; listas suspensas). A
@@ -183,8 +187,11 @@ para o site. Endereço: https://gmontijo1.github.io/raia/
   data). O professor planeja na tela da turma, e o aluno vê "Seus treinos desta semana".
 - **Biblioteca:** `app/vendor/supabase.js` (versão fixa, ver `LEIA-ME.txt` ao lado), dentro do app
   para funcionar sem internet.
-- **Visita diária:** o workflow `manter-nuvem.yml` chama a função `ping` todo dia, para o
-  projeto gratuito não "dormir" (ele dorme com 7 dias sem uso).
+- **Visita para não dormir:** o workflow `manter-nuvem.yml` chama a função `ping` 3 vezes por dia,
+  e ela grava uma linha na tabela `batimento`. O projeto gratuito "dorme" quando a semana tem pouco
+  uso de verdade no banco. Uma visita por dia que só lia `'ok'` não bastou: o projeto dormiu em
+  15/10/2026 e o GÊ teve de reativar no painel do Supabase (Resume project; os dados voltam
+  inteiros). Depois de dormir, o endereço do projeto some do DNS (curl sai com código 6).
 
 ## Próximas etapas
 

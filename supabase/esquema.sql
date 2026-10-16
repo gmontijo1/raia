@@ -410,9 +410,23 @@ begin
   delete from public.perfis where usuario_id = p_usuario;
 end $$;
 
--- usado pela visita diária do GitHub que impede o projeto gratuito de "dormir"
+-- usado pela visita do GitHub (3 vezes por dia) que impede o projeto gratuito de "dormir".
+-- Grava uma linha de verdade: só ler 'ok' não bastou (o projeto dormiu em 15/10/2026 mesmo com
+-- a visita diária respondendo), porque o Supabase só conta como uso o que mexe no banco.
+create table if not exists public.batimento (
+  id     int primary key default 1 check (id = 1),
+  em     timestamptz not null default now(),
+  vezes  bigint not null default 0
+);
+alter table public.batimento enable row level security;
+revoke all on public.batimento from anon, authenticated;
+
 create or replace function public.ping() returns text
-language sql stable as $$ select 'ok'::text $$;
+language sql volatile security definer set search_path = public as $$
+  insert into public.batimento (id, em, vezes) values (1, now(), 1)
+  on conflict (id) do update set em = now(), vezes = public.batimento.vezes + 1;
+  select 'ok'::text;
+$$;
 
 revoke execute on function
   public.novo_codigo(), public.criar_convite(text, uuid, int), public.resgatar_convite(text),

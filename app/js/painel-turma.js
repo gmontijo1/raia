@@ -126,6 +126,8 @@ export function painelDaTurma({ turma, tempos, nadadores, pses, semanas }) {
       el.append(h('div', { class: 'card vazio' }, h('h3', { text: 'Nenhum tempo nesta semana' }),
         h('p', { text: inicio === estaSemana ? 'O resumo aparece assim que a turma tiver tempos marcados nesta semana.' : 'A turma não teve tempos cronometrados nesta semana.' })));
     } else {
+      // ninguém tinha tempo anterior nas provas da semana: é o ponto de partida (1ª semana da turma)
+      const partida = !r.alunos.some(a => a.melhor);
       /* MVP */
       if (r.mvp) {
         const m = r.mvp;
@@ -143,15 +145,17 @@ export function painelDaTurma({ turma, tempos, nadadores, pses, semanas }) {
         el.append(h('div', { class: 'card mvp sem-mvp' },
           h('div', { class: 'mvp-medalha', 'aria-hidden': 'true' }, h('span', { text: 'MVP' })),
           h('div', { class: 'mvp-texto' }, h('span', { class: 'lbl', text: 'MVP da semana' }),
-            h('b', { class: 'mvp-nome', text: 'Ninguém bateu o próprio recorde' }),
-            h('span', { class: 'sub', text: 'O MVP é quem mais melhora o próprio melhor tempo na semana.' }))));
+            h('b', { class: 'mvp-nome', text: partida ? 'Semana do ponto de partida' : 'Ninguém bateu o próprio recorde' }),
+            h('span', { class: 'sub', text: partida
+              ? 'Estes são os primeiros tempos de cada aluno. A partir da próxima semana, o MVP é quem mais melhorar o próprio tempo.'
+              : 'O MVP é quem mais melhora o próprio melhor tempo na semana.' }))));
       }
 
       /* números da semana */
       el.append(h('div', { class: 'blocos' },
         bloco('Alunos que nadaram', `${r.alunos.length}${total ? ` de ${total}` : ''}`, `${r.treinos} ${r.treinos === 1 ? 'treino' : 'treinos'} com tempo`),
         bloco('Repetições', String(r.reps), 'cronometradas na semana'),
-        bloco('Recordes pessoais', String(r.recordes), r.recordes ? 'batidos na semana' : 'nenhum nesta semana', r.recordes ? 'bom' : null),
+        bloco('Recordes pessoais', partida ? '–' : String(r.recordes), partida ? 'primeiros tempos, sem comparação' : r.recordes ? 'batidos na semana' : 'nenhum nesta semana', r.recordes ? 'bom' : null),
         bloco('PSE média', fmtPse(r.pseMedia), r.pseMedia == null ? 'sem respostas' : r.planejado != null ? `planejado ${fmtPse(r.planejado)}` : 'sem planejado')));
 
       /* pódio e dedicação */
