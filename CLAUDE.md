@@ -163,7 +163,10 @@ GitHub Pages, publicado sozinho pelo workflow `.github/workflows/publicar.yml` a
 que mexe em `app/` (ou manualmente em Actions → Publicar app → Run workflow). Só a pasta `app/` vai
 para o site. Endereço: **https://projetonatacao.com.br/** (domínio próprio desde 16/10/2026, comprado
 pelo GÊ no registro.br, DNS do próprio registro.br: 4 registros A para os IPs do GitHub Pages e `www`
-CNAME para `gmontijo1.github.io`; domínio configurado no Pages pela API, `cname`). O endereço antigo
+CNAME para `gmontijo1.github.io`; domínio configurado no Pages pela API, `cname`). HTTPS forçado
+(`https_enforced`) desde 16/10/2026, certificado do GitHub para o domínio e o `www`, renovado sozinho.
+Se o certificado não sair depois que o DNS responde (`https_certificate` nulo), tirar e pôr o `cname`
+de novo pela API faz o GitHub pedir. O endereço antigo
 https://gmontijo1.github.io/raia/ redireciona para o novo. Os dados do app no aparelho (IndexedDB)
 são por endereço: quem usava o antigo começa vazio no novo e recebe da nuvem ao entrar. No Supabase,
 Authentication → URL Configuration tem o domínio novo como Site URL e nas Redirect URLs (o login
