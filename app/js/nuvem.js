@@ -23,6 +23,8 @@ export function explicar(erro) {
   const m = String((erro && (erro.message || erro.error_description)) || erro || '');
   if (/failed to fetch|networkerror|network request|load failed/i.test(m)) return 'Sem conexão com a internet. Tente de novo quando conectar.';
   if (/jwt|token/i.test(m) && /expired|invalid/i.test(m)) return 'Sua sessão expirou. Saia e entre de novo.';
+  if (/row-level security|permission denied/i.test(m)) return 'A nuvem não deixou gravar: a sua conta está sem permissão. Saia e entre de novo; se continuar, fale com o coordenador.';
+  if (/violates (check|foreign key|not-null) constraint|value too long/i.test(m)) return 'A nuvem recusou um registro com dado fora do padrão. Ele continua guardado no aparelho.';
   return m || 'Algo deu errado.';
 }
 

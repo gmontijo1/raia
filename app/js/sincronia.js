@@ -75,16 +75,39 @@ function falhou(tab, error) {
   throw error;
 }
 
+// Erro do próprio registro (valor fora da faixa, texto grande demais, referência que falta):
+// PostgreSQL 22xxx e 23xxx. Rede, permissão e esquema continuam parando a sincronização.
+const erroDoRegistro = e => e && /^2[23]/.test(String(e.code || ''));
+const subir = (tab, lote) => sb().from(tab.nome).upsert(lote.map(o => paraNuvem(tab, o)), { onConflict: 'id' });
+
 async function enviar(tab, exemplos) {
   const inicio = new Date().toISOString();
   const lista = await pendentesDe(tab, exemplos);
+  const recusados = [];
   for (let i = 0; i < lista.length; i += LOTE) {
-    const { error } = await sb().from(tab.nome).upsert(lista.slice(i, i + LOTE).map(o => paraNuvem(tab, o)), { onConflict: 'id' });
-    if (error && falhou(tab, error)) return 0;
+    const lote = lista.slice(i, i + LOTE);
+    const { error } = await subir(tab, lote);
+    if (!error) continue;
+    if (!erroDoRegistro(error)) { if (falhou(tab, error)) return 0; }
+    // Um registro que a nuvem não aceita não pode travar os outros: manda um por um e deixa
+    // de fora só o recusado (ele continua no aparelho e aparece na tela Dados).
+    for (const o of lote) {
+      const r = await subir(tab, [o]);
+      if (r.error && !erroDoRegistro(r.error)) throw r.error;
+      if (r.error) recusados.push({ tabela: tab.nome, id: o.id, erro: r.error.message, em: new Date().toISOString() });
+    }
+  }
+  if (recusados.length) {
+    console.warn(`Sincronização: a nuvem recusou ${recusados.length} registro(s) de "${tab.nome}".`, recusados);
+    const antigos = (await db.config.get('recusados', [])).filter(x => !recusados.some(r => r.id === x.id));
+    await db.config.set('recusados', [...antigos, ...recusados].slice(-50));
   }
   await db.config.set(`envio:${tab.nome}`, inicio);
   return lista.length;
 }
+
+// Registros que a nuvem recusou (ficaram só no aparelho).
+export const registrosRecusados = () => db.config.get('recusados', []);
 
 async function receber(tab) {
   const chave = `recebido:${tab.nome}`;

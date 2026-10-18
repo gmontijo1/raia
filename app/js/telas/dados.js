@@ -4,7 +4,7 @@ import { h, aviso, fmtTempo, dec2, hoje, botaoConfirmar } from '../util.js';
 import * as db from '../db.js';
 import { VERSAO_APP } from '../versao.js';
 import { nuvemLigada, perfil, sair } from '../nuvem.js';
-import { sincronizar, aoMudarEstado, contarPendentes } from '../sincronia.js';
+import { sincronizar, aoMudarEstado, contarPendentes, registrosRecusados } from '../sincronia.js';
 import { planilhaPse } from '../pse.js';
 import { planilhaMedias } from '../esforco.js';
 
@@ -25,10 +25,14 @@ function cartaoConta() {
       parado: 'Ainda não sincronizou nesta abertura do app.'
     }[e.fase] || '';
   });
+  const recusa = h('p', { class: 'erro-campo' });
+  registrosRecusados().then(l => {
+    if (l.length) recusa.textContent = `${l.length === 1 ? '1 registro foi recusado' : `${l.length} registros foram recusados`} pela nuvem (dado fora do padrão) e ${l.length === 1 ? 'ficou' : 'ficaram'} só neste aparelho. Baixe uma cópia de segurança e mande para quem cuida do app.`;
+  });
   const card = h('div', { class: 'card' },
     h('h3', { text: 'Sua conta' }),
     h('p', { class: 'dica', style: 'margin-top:6px', text: `${p.nome || p.email} · ${p.email && p.nome ? `${p.email} · ` : ''}${PAPEL[p.papel] || p.papel}` }),
-    situacao,
+    situacao, recusa,
     h('div', { class: 'acoes', style: 'margin-top:12px' },
       h('button', { class: 'btn', type: 'button', onclick: () => sincronizar() }, 'Sincronizar agora'),
       botaoConfirmar('Sair da conta', 'Toque de novo para sair', async () => {

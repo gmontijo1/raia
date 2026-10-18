@@ -35,7 +35,7 @@ treino por raias sem pedido dele.
 
 ## Estado atual
 
-- **App v0.13.0 no ar (com login):** https://projetonatacao.com.br/ (ver "Base do app" e "Publicação").
+- **App v0.13.1 no ar (com login):** https://projetonatacao.com.br/ (ver "Base do app" e "Publicação").
 - **Coordenação aprovou (10/10/2026) e mandou a planilha real** (`privado/*.xlsx`: participantes,
   periodização do semestre, treinos semanais, escala). Dados reais entram no app só pelo arquivo de
   importação: `python privado/importar_planilha.py privado/<planilha>.xlsx privado/raia-importacao-<semestre>.json`
@@ -125,7 +125,11 @@ direto no navegador. Não usar bundler, npm ou TypeScript: o PC do GÊ não tem 
 
 - **Telas** (`app/js/telas/`): `inicio` (turmas), `turma` (nadadores, cadastro um a um ou vários de
   uma vez), `treino` (cartão por nadador com LARGADA/PARAR, "Largar todos", cancelar largada, trava de
-  1 s após o PARAR contra toque duplo, mínimo de 2 s por tempo, presença, desfazer; tocar no nome abre
+  1 s após o PARAR contra toque duplo, mínimo de 2 s e máximo de 1 hora por tempo, presença, desfazer;
+  quem está nadando e quem faltou ficam também no `localStorage` (`raia-cronometros`, vale para o dia),
+  então o cronômetro volta rodando se o app recarregar ou o celular fechar a página; o tempo decorrido
+  usa `performance.now()`, ou o relógio do aparelho quando os dois divergem mais de 1 s (o
+  `performance.now()` para enquanto o celular dorme com a tela apagada); tocar no nome abre
   o painel do nadador com as repetições de hoje em tempo real, com o próprio LARGADA/PARAR — tela
   cheia no celular, lateral a partir de 900px), `nadador`
   (evolução por distância e estilo, tabela, apagar tempo, editar/arquivar) e `dados` (planilha CSV,
@@ -139,7 +143,9 @@ direto no navegador. Não usar bundler, npm ou TypeScript: o PC do GÊ não tem 
   rede). **Ao mudar qualquer arquivo do app, subir a versão em `app/sw.js` (VERSAO) e em
   `app/js/versao.js` (VERSAO_APP), e incluir arquivo novo na lista `ARQUIVOS` do `sw.js`.** Sem
   isso, os aparelhos continuam com a versão antiga. Quando há versão nova, o app mostra
-  "Atualizar agora" (não recarrega sozinho, para não interromper um treino).
+  "Atualizar agora" (não recarrega sozinho, para não interromper um treino). O service worker só
+  entrega o app guardado para a raiz (`/` ou `index.html`); outras páginas do site, como
+  `privacidade.html`, vêm da rede.
 - **Exemplo (v0.11, `js/exemplo.js`, `VERSAO_EXEMPLO = 2`):** "Carregar turma de exemplo" (ou
   `#/carregar-exemplo`) cria a "Turma de exemplo", só no aparelho (`exemplo: true`, nunca sobe):
   10 alunos inventados, 12 semanas de terças e quintas 12h até ontem, faltas, 3–6 repetições de
@@ -187,12 +193,18 @@ volta para `location.origin + location.pathname`). O link dos convites fica em `
   papel. O primeiro código master sai no fim do `esquema.sql`.
 - **Modos do app** (`app/js/app.js`): `local`, `visitante` (só "Entrar"), `sem-papel` (só o
   código), `aluno` (`telas/aluno.js`), `equipe` (o app inteiro; master também vê
-  `telas/acessos.js`). Sem internet, usa o último perfil guardado no aparelho.
+  `telas/acessos.js`). Sem internet, usa o último perfil guardado no aparelho. Isso vale também
+  quando a sessão venceu e a renovação falhou por rede (`AuthRetryableFetchError`: Wi-Fi que
+  conecta mas não navega, com `navigator.onLine` verdadeiro); a biblioteca guarda a sessão e
+  renova quando a rede volta.
 - **Sincronização** (`app/js/sincronia.js`, só para a equipe): tudo é gravado primeiro no
   IndexedDB. Depois o app envia o que mudou (`atualizadoEm` maior que o último envio, via upsert)
   e baixa o que outros aparelhos gravaram (`sincronizado_em`, carimbado pelo banco, com 5 min de
   folga). Num conflito, ganha o `atualizado_em` mais novo (trigger `carimbar`). A turma de exemplo
-  nunca sobe.
+  nunca sobe. Se a nuvem recusa um registro pelo conteúdo (erro PostgreSQL 22xxx/23xxx: check,
+  chave estrangeira, texto grande), o lote vai um por um e só o recusado fica de fora (config
+  `recusados`, aviso na tela Dados), para um registro ruim não travar a sincronização inteira. As
+  telas também barram na origem o que a nuvem recusaria (duração da PSE fora de 1–600 min vira vazia).
 - **Agenda:** a turma tem `agenda` (dias da semana + horário) e `planos` (treino planejado por
   data). O professor planeja na tela da turma, e o aluno vê "Seus treinos desta semana".
 - **Biblioteca:** `app/vendor/supabase.js` (versão fixa, ver `LEIA-ME.txt` ao lado), dentro do app
@@ -201,7 +213,9 @@ volta para `location.origin + location.pathname`). O link dos convites fica em `
   e ela grava uma linha na tabela `batimento`. O projeto gratuito "dorme" quando a semana tem pouco
   uso de verdade no banco. Uma visita por dia que só lia `'ok'` não bastou: o projeto dormiu em
   15/10/2026 e o GÊ teve de reativar no painel do Supabase (Resume project; os dados voltam
-  inteiros). Depois de dormir, o endereço do projeto some do DNS (curl sai com código 6).
+  inteiros). Depois de dormir, o endereço do projeto some do DNS (curl sai com código 6). Cada
+  visita também religa o próprio workflow pela API (`actions: write`), porque o GitHub desliga
+  agendamentos de repositório público sem commits há 60 dias (férias).
 
 ## Próximas etapas
 

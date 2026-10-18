@@ -67,7 +67,9 @@ export function perguntarPse({ titulo, texto, valor = null, duracao = DURACAO_PA
       ok.disabled = escolhido == null && !semPse;
       for (const b of escala.querySelectorAll('.pse-num')) b.setAttribute('aria-checked', String(Number(b.dataset.valor) === escolhido));
     }
-    ok.addEventListener('click', () => fim(escolhido == null ? { valor: null } : { valor: escolhido, duracao: dur.value ? Math.round(Number(dur.value)) : null }));
+    // duração fora de 1 a 600 min (digitada errado) fica sem duração: a nuvem recusaria
+    const minutos = () => { const m = Math.round(Number(dur.value)); return m >= 1 && m <= 600 ? m : null; };
+    ok.addEventListener('click', () => fim(escolhido == null ? { valor: null } : { valor: escolhido, duracao: minutos() }));
     // o foco começa no título (no primeiro botão, o 10 pareceria já escolhido)
     const cabeca = h('h3', { id: 'pse-titulo', tabindex: '-1', text: titulo });
     dlg.append(

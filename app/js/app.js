@@ -163,14 +163,16 @@ function registrarServiceWorker() {
 /* ---------- quem está usando ---------- */
 async function descobrirModo() {
   if (!nuvemLigada()) return 'local';
-  let sessao = null;
-  try { sessao = await sessaoAtual(); } catch (e) { /* sem internet ou sessão vencida */ }
+  let sessao = null, semRede = false;
+  // Sessão vencida sem conseguir renovar por falta de rede (Wi-Fi da piscina que conecta mas não
+  // navega): a biblioteca guarda a sessão e renova depois; até lá, segue com o último perfil.
+  try { sessao = await sessaoAtual(); } catch (e) { semRede = e && (e.name === 'AuthRetryableFetchError' || e.status === 0); }
   // volta do login do Google: tira o ?code= do endereço
   if (/[?&]code=/.test(location.search)) history.replaceState(null, '', location.pathname + (location.hash || '#/'));
   let p = null;
   if (sessao) {
     try { p = await carregarPerfil(sessao); } catch (e) { p = await perfilGuardado(); }
-  } else if (!navigator.onLine) {
+  } else if (!navigator.onLine || semRede) {
     p = await perfilGuardado();   // professor na piscina sem Wi-Fi: segue com o último perfil
   }
   if (!p) return 'visitante';

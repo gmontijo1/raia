@@ -18,15 +18,50 @@ import { vcritAtual, alvoVcrit } from '../vcrit.js';
 import { perguntarPse, chipPse, DURACAO_PADRAO } from '../pse.js';
 
 // Estado do cronômetro por turma. Fica na memória enquanto o app está aberto, então dá
-// para olhar outra tela e voltar sem perder quem está nadando.
+// para olhar outra tela e voltar sem perder quem está nadando. Quem está nadando (e quem
+// faltou) também fica guardado no aparelho na hora: se o celular fechar o app ou a página
+// recarregar no meio de uma repetição, o cronômetro volta rodando de onde estava.
+const CHAVE_CRON = 'raia-cronometros';
 const sessoes = new Map();
 function sessao(turmaId) {
-  if (!sessoes.has(turmaId)) sessoes.set(turmaId, { ausentes: new Set(), rodando: new Map(), ultimo: new Map(), pausa: new Map() });
+  if (!sessoes.has(turmaId)) {
+    const S = { ausentes: new Set(), rodando: new Map(), ultimo: new Map(), pausa: new Map() };
+    try {
+      const g = JSON.parse(localStorage.getItem(CHAVE_CRON) || '{}')[turmaId];
+      if (g && g.data === hoje()) {
+        const p = performance.now(), agora = Date.now();
+        for (const [id, R] of g.rodando) S.rodando.set(id, { ...R, t0: p - (agora - R.inicioEm) });
+        for (const id of g.ausentes) S.ausentes.add(id);
+      }
+    } catch (e) { /* guardado ilegível: começa do zero */ }
+    sessoes.set(turmaId, S);
+  }
   return sessoes.get(turmaId);
+}
+function guardarCronometros() {
+  try {
+    // turmas que ainda não foram abertas desde que o app voltou ficam como estavam
+    const tudo = JSON.parse(localStorage.getItem(CHAVE_CRON) || '{}');
+    for (const k of Object.keys(tudo)) if (tudo[k].data !== hoje()) delete tudo[k];
+    for (const [turmaId, S] of sessoes) {
+      if (!S.rodando.size && !S.ausentes.size) { delete tudo[turmaId]; continue; }
+      tudo[turmaId] = { data: hoje(), ausentes: [...S.ausentes],
+        rodando: [...S.rodando].map(([id, R]) => [id, { inicioEm: R.inicioEm, dist: R.dist, estilo: R.estilo }]) };
+    }
+    localStorage.setItem(CHAVE_CRON, JSON.stringify(tudo));
+  } catch (e) { /* sem espaço ou guardado ilegível: fica só na memória */ }
 }
 const algumRodando = () => [...sessoes.values()].some(S => S.rodando.size > 0);
 
+// Segundos desde a LARGADA. Vale o performance.now(), que não pula quando o celular acerta o
+// relógio; mas ele para enquanto o celular "dorme" com a tela apagada, e aí vale o relógio.
+function decorrido(R, agora = performance.now()) {
+  const p = (agora - R.t0) / 1000, d = (Date.now() - R.inicioEm) / 1000;
+  return d - p > 1 ? d : p;
+}
+
 const MINIMO_S = 2;      // menos que isso é toque sem querer
+const MAXIMO_S = 3600;   // 1 hora ou mais é cronômetro esquecido (a nuvem nem aceita)
 const PAUSA_MS = 1000;   // depois do PARAR, a LARGADA fica travada um instante (evita toque duplo)
 
 /* tela sempre acesa enquanto alguém nada */
@@ -64,6 +99,7 @@ export async function render(caixa, turmaId) {
   const S = sessao(turmaId);
   const dHoje = hoje();
   const porId = new Map(nads.map(n => [n.id, n]));
+  for (const id of S.rodando.keys()) if (!porId.has(id)) S.rodando.delete(id);   // arquivado no meio
   // Quem já encerrou o treino de hoje (guardado no aparelho; vale só para o dia).
   const chaveEnc = `encerrados:${turmaId}`;
   const guardados = await db.config.get(chaveEnc, null);
@@ -122,6 +158,7 @@ export async function render(caixa, turmaId) {
     cb.checked = !S.ausentes.has(n.id);
     cb.addEventListener('change', () => {
       if (cb.checked) S.ausentes.delete(n.id); else S.ausentes.add(n.id);
+      guardarCronometros();
       montar();
     });
     caixasPresenca.set(n.id, cb);
@@ -247,16 +284,17 @@ export async function render(caixa, turmaId) {
     btnTodos.hidden = prontos < 2;
   }
 
-  function largar(id, t0) {
+  function largar(id, t0, inicioEm) {
     if ((S.pausa.get(id) || 0) > performance.now() || S.rodando.has(id)) return;
-    S.rodando.set(id, { t0, dist: cfg.dist, estilo: cfg.estilo });
+    S.rodando.set(id, { t0, inicioEm, dist: cfg.dist, estilo: cfg.estilo });
     if (painelId === id) painelCombo = `${cfg.dist}|${cfg.estilo}`;
     const cb = caixasPresenca.get(id);
     if (cb) cb.disabled = true;
   }
   function largarTodos() {
-    const t0 = performance.now();
-    for (const id of cards.keys()) largar(id, t0);
+    const t0 = performance.now(), inicioEm = Date.now();
+    for (const id of cards.keys()) largar(id, t0, inicioEm);
+    guardarCronometros();
     vibrar(20);
     pintarTodos();
     manterTelaAcesa();
@@ -264,6 +302,7 @@ export async function render(caixa, turmaId) {
   }
   function cancelarLargada(id) {
     S.rodando.delete(id);
+    guardarCronometros();
     const cb = caixasPresenca.get(id);
     if (cb) cb.disabled = false;
     pintarTodos();
@@ -273,7 +312,8 @@ export async function render(caixa, turmaId) {
   async function tocar(id) {
     const R = S.rodando.get(id);
     if (!R) {
-      largar(id, performance.now());
+      largar(id, performance.now(), Date.now());
+      guardarCronometros();
       vibrar(15);
       pintarTodos();
       manterTelaAcesa();
@@ -281,11 +321,17 @@ export async function render(caixa, turmaId) {
       return;
     }
     const agora = performance.now();
-    const seg = (agora - R.t0) / 1000;
+    const seg = decorrido(R, agora);
     if (seg < MINIMO_S) { aviso(`Toque rápido demais (menos de ${MINIMO_S} s). Toque em PARAR quando o nadador tocar a borda.`); return; }
+    if (seg >= MAXIMO_S) {
+      cancelarLargada(id);
+      aviso('Esse cronômetro passou de 1 hora e foi descartado. Toque em LARGADA para começar de novo.');
+      return;
+    }
     const tt = Math.round(seg * 100) / 100;
     const nome = porId.get(id).nome;
     S.rodando.delete(id);
+    guardarCronometros();
     S.pausa.set(id, agora + PAUSA_MS);
     setTimeout(() => pintar(id), PAUSA_MS + 20);
     S.ultimo.set(id, { t: tt, dist: R.dist, estilo: R.estilo });   // mostra na hora, antes de gravar
@@ -311,6 +357,7 @@ export async function render(caixa, turmaId) {
       S.ultimo.delete(id);
       S.pausa.delete(id);
       S.rodando.set(id, R);          // volta a correr: o professor pode tocar PARAR de novo
+      guardarCronometros();
       pintarTodos();
       iniciarTick();
       aviso('Não consegui salvar esse tempo. Toque em PARAR de novo.');
@@ -366,7 +413,7 @@ export async function render(caixa, turmaId) {
       botao.textContent = 'PARAR';
       botao.className = 'btn-cron parar';
       botao.setAttribute('aria-label', `Parar o tempo de ${n.nome}`);
-      painelRelogio.textContent = fmtTempo((performance.now() - R.t0) / 1000);
+      painelRelogio.textContent = fmtTempo(decorrido(R));
     } else {
       botao.textContent = 'LARGADA';
       botao.className = 'btn-cron largar';
@@ -450,6 +497,7 @@ export async function render(caixa, turmaId) {
     });
     if (!ok) return;
     for (const id of cards.keys()) { S.rodando.delete(id); S.encerrados.add(id); }
+    guardarCronometros();
     await salvarEncerrados();
     if (!algumRodando()) liberarTela();
     enviarAgora('Treino da turma');
@@ -524,7 +572,7 @@ export async function render(caixa, turmaId) {
       const c = cards.get(id);
       if (!c) continue;
       algum = true;
-      c.relogio.textContent = fmtTempo((agora - R.t0) / 1000);
+      c.relogio.textContent = fmtTempo(decorrido(R, agora));
       if (painelId === id && painelRelogio) painelRelogio.textContent = c.relogio.textContent;
     }
     if (algum) raf = requestAnimationFrame(tick);
@@ -569,6 +617,7 @@ export async function render(caixa, turmaId) {
 
   montar();
   listarSessao();
+  if (S.rodando.size) manterTelaAcesa();   // voltou com alguém nadando
   const pararDeOuvir = aoMudarEstado(() => pintarEncerrados());   // "Enviando…" → "Salvo na nuvem"
 
   return () => {

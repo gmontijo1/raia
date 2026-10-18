@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 jobs:
   ping:
@@ -31,3 +32,10 @@ jobs:
             -H "apikey: $CHAVE" -H "Content-Type: application/json" -d '{}')
           echo "Resposta: $RESPOSTA"
           case "$RESPOSTA" in *" 200") exit 0 ;; *) exit 1 ;; esac
+      # O GitHub desliga o agendamento de repositório público sem commits há 60 dias (ex.: férias).
+      # Religar esta visita pela API a cada rodada evita que ela pare sozinha.
+      - name: Manter a visita ligada
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/manter-nuvem.yml/enable"

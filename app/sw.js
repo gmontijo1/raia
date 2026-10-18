@@ -1,7 +1,7 @@
 // Service worker do Raia: guarda o app no aparelho para abrir e funcionar sem internet.
 // Ao mudar qualquer arquivo do app, suba a VERSAO aqui e em js/versao.js.
 
-const VERSAO = '0.13.0';
+const VERSAO = '0.13.1';
 const CACHE = `raia-${VERSAO}`;
 const ARQUIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'css/raia.css',
@@ -35,7 +35,11 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
   if (req.mode === 'navigate') {
-    e.respondWith(caches.match('index.html').then(r => r || fetch(req)));
+    // O app abre do aparelho; outras páginas do site (ex.: privacidade.html) vêm da rede.
+    const doApp = /\/(index\.html)?$/.test(new URL(req.url).pathname);
+    e.respondWith(doApp
+      ? caches.match('index.html').then(r => r || fetch(req))
+      : fetch(req).catch(() => caches.match('index.html')));
     return;
   }
   e.respondWith(caches.match(req).then(r => r || fetch(req)));
