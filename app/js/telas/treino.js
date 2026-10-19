@@ -271,7 +271,7 @@ export async function render(caixa, turmaId) {
       c.botao.setAttribute('aria-label', `Largada de ${c.nome}`);
       c.cancelar.hidden = true;
       c.relogio.textContent = ult ? fmtTempo(ult.t) : '';
-      if (ult) c.nota.append(h('span', { text: `último: ${combo(ult.dist, ult.estilo)}` }), ult.id ? chip(ult) : null);
+      if (ult) c.nota.append(h('span', { text: `último: ${combo(ult.dist, ult.estilo)}` }), ult.id ? chip(ult) : '');
     }
     c.botao.disabled = (S.pausa.get(id) || 0) > performance.now();
     c.encerrar.disabled = !!R;

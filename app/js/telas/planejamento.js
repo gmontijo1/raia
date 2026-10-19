@@ -13,6 +13,7 @@ import {
 } from '../semana.js';
 import { mediaPse, fmtPse } from '../pse.js';
 import { cartaoEsforco } from '../esforco.js';
+import { lerPlanilha, semanasDaPlanilha } from '../planilha.js';
 
 const ORDEM_DIAS = [1, 2, 3, 4, 5, 6, 0];   // segunda primeiro
 const segundaDe = iso => { const d = new Date(`${iso}T12:00:00`); return somarDias(iso, -((d.getDay() + 6) % 7)); };
@@ -119,9 +120,10 @@ export async function render(caixa, numeroPedido) {
       (x.treinos || []).length
         ? h('div', { class: 'treinos-semana' }, x.treinos.map(t => blocoTreino(t, `Dia ${t.dia}`)))
         : h('p', { class: 'sub', style: 'margin-top:12px', text: 'Os treinos desta semana ainda não foram escritos.' }),
-      temVcrit(x) ? h('p', { class: 'dica', style: 'margin-top:12px' }, h('b', { text: 'Teste de Vcrit: ' }), 'cronometre 400 m e 200 m crawl no máximo (distâncias 400 m e 200 m no treino). A Vcrit de cada aluno aparece na evolução dele.') : null,
+      temVcrit(x) ? h('p', { class: 'dica', style: 'margin-top:12px' }, h('b', { text: 'Teste de Vcrit: ' }), 'cronometre 400 m e 200 m crawl no máximo (distâncias 400 m e 200 m no treino). A Vcrit de cada aluno aparece na evolução dele.') : '',
       h('div', { class: 'acoes', style: 'margin-top:14px' },
         h('button', { class: 'btn', type: 'button', onclick: () => editarSemana(x) }, 'Editar semana'),
+        botaoPlanilha(todas),
         h('a', { class: 'btn fantasma', href: '#/pse' }, 'Escala de PSE')));
   }
 
@@ -277,12 +279,12 @@ function desenharGrafico(host, balao, semanas, { atual, sel, aoEscolher }) {
     const alvo = s('rect', { x: xb, y: m.t, width: banda, height: H - m.t, class: 'g-alvo', tabindex: '0', role: 'button', 'aria-label': `Semana ${x.numero}, ${datasSemana(x)}, ${x.periodo || 'sem período'}${vol != null ? `, ${fmtMetros(vol)} por treino` : ''}` });
     const mostrar = () => {
       balao.textContent = '';
-      balao.append(h('b', { text: `S${x.numero} · ${datasSemana(x)}` }),
+      balao.append(...[h('b', { text: `S${x.numero} · ${datasSemana(x)}` }),
         h('span', { text: x.periodo || 'Sem período' }),
         vol != null ? h('span', { text: `Volume ${fmtMetros(vol)} (${pct(x.volume)})` }) : null,
         x.intensidade != null ? h('span', { text: `Intensidade ${pct(x.intensidade)}` }) : null,
         media != null ? h('span', { text: `Treinos: média ${fmtMetros(media)}` }) : null,
-        extrasDe(x).length ? h('span', { text: extrasDe(x).join(' · ') }) : null);
+        extrasDe(x).length ? h('span', { text: extrasDe(x).join(' · ') }) : null].filter(Boolean));
       balao.hidden = false;
       const bw = balao.offsetWidth;
       balao.style.left = `${Math.min(Math.max(0, cx - bw / 2), W - bw)}px`;
@@ -390,6 +392,70 @@ function editarSemana(x) {
   dlg.showModal();
 }
 const limpo = x => { const { nova, ...resto } = x; return resto; };
+
+/* ---------------------------------------------------------------- trazer da planilha do Excel */
+// O coordenador continua escrevendo os treinos na planilha (uma aba por semana, "19 a 2410",
+// com DIA 1, DIA 2, DIA 3) e traz para o app: só os treinos das semanas, nada de turmas ou alunos.
+function botaoPlanilha(semanas) {
+  const arquivo = h('input', { type: 'file', id: 'planilha-arquivo', accept: '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', hidden: true });
+  arquivo.addEventListener('change', async () => {
+    const f = arquivo.files[0];
+    arquivo.value = '';
+    if (!f) return;
+    try { mostrarPlanilha(semanasDaPlanilha(await lerPlanilha(f), semanas)); }
+    catch (e) { console.warn('Planilha:', e); aviso(e.message || 'Não consegui ler essa planilha.'); }
+  });
+  return [h('label', { class: 'btn fantasma', for: 'planilha-arquivo', tabindex: 0, onkeydown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); arquivo.click(); } } }, 'Trazer da planilha'), arquivo];
+}
+
+// Mostra o que a planilha traz, semana a semana, e grava só as marcadas.
+function mostrarPlanilha({ achadas, soltas }) {
+  const SITUACAO = { nova: 'semana sem treinos no app', muda: 'substitui os treinos que estão no app', igual: 'já está igual no app' };
+  const caixas = new Map();
+  const itens = achadas.map(a => {
+    const cb = h('input', { type: 'checkbox', id: `plan-${a.semana.id}` });
+    cb.checked = a.situacao !== 'igual';
+    cb.disabled = a.situacao === 'igual';
+    caixas.set(a, cb);
+    const totais = a.treinos.map(t => (t.total ? fmtMetros(t.total) : '–')).join(' · ');
+    return h('li', null, h('label', { class: 'item item-check', for: cb.id },
+      h('b', { text: `S${a.semana.numero} · ${datasSemana(a.semana)}` }),
+      h('span', { class: 'lado' }, cb),
+      h('span', { class: 'sub', text: `${a.treinos.length} ${a.treinos.length === 1 ? 'treino' : 'treinos'} (${totais}) · aba "${a.aba}" · ${SITUACAO[a.situacao]}` })));
+  });
+  const temNovidade = achadas.some(a => a.situacao !== 'igual');
+
+  const dlg = h('dialog', { class: 'editor-semana', 'aria-labelledby': 'plan-titulo' });
+  const fechar = () => { dlg.close(); dlg.remove(); };
+  const ok = h('button', { class: 'btn primario', type: 'button' }, 'Trazer para o app');
+  ok.addEventListener('click', async () => {
+    const escolhidas = achadas.filter(a => a.situacao !== 'igual' && caixas.get(a).checked);
+    if (!escolhidas.length) { fechar(); return; }
+    ok.disabled = true;
+    for (const a of escolhidas) await db.salvarSemana({ ...limpo(a.semana), treinos: a.treinos });
+    aviso(`${escolhidas.length === 1 ? '1 semana atualizada' : `${escolhidas.length} semanas atualizadas`} com os treinos da planilha.`);
+    fechar();
+    // fica na semana que está aberta, se ela veio da planilha; senão, vai para a primeira que veio
+    const aberta = escolhidas.find(a => location.hash === `#/planejamento/${a.semana.numero}`) || escolhidas[0];
+    const destino = `#/planejamento/${aberta.semana.numero}`;
+    if (location.hash === destino) window.dispatchEvent(new HashChangeEvent('hashchange')); else location.hash = destino;
+  });
+  dlg.append(
+    h('h3', { id: 'plan-titulo', text: 'Treinos da planilha' }),
+    achadas.length
+      ? h('div', null,
+        h('p', { class: 'sub', text: 'Cada aba de semana da planilha vira os treinos Dia 1, 2 e 3 dessa semana no app, para todas as turmas. Marque o que deve entrar.' }),
+        h('ul', { class: 'lista' }, itens))
+      : h('p', { class: 'sub', text: 'Não achei abas de semana nessa planilha. O nome da aba precisa ser o período da semana, como "19 a 2410" ou "2610 a 3110", e a aba precisa ter os blocos DIA 1, DIA 2…' }),
+    soltas.length ? h('details', { style: 'margin-top:12px' }, h('summary', { text: `Abas que ficaram de fora (${soltas.length})` }),
+      h('ul', { class: 'lista' }, soltas.map(x => h('li', null, h('div', { class: 'item' }, h('b', { text: x.aba }), h('span', { class: 'sub', text: x.motivo })))))) : '',
+    h('div', { class: 'acoes', style: 'margin-top:14px' },
+      temNovidade ? ok : null,
+      h('button', { class: 'btn fantasma', type: 'button', onclick: fechar }, temNovidade ? 'Cancelar' : 'Fechar')));
+  dlg.addEventListener('cancel', () => setTimeout(() => dlg.remove(), 0));
+  document.body.append(dlg);
+  dlg.showModal();
+}
 
 /* ---------------------------------------------------------------- escala de professores */
 function cartaoEscala(escala, dHoje) {

@@ -152,7 +152,7 @@ export function perguntar({ titulo, texto, botao }) {
     const fim = ok => { dlg.close(); dlg.remove(); resolve(ok); };
     dlg.append(
       h('h3', { id: 'pergunta-titulo', text: titulo }),
-      texto ? h('p', { class: 'sub', text: texto }) : null,
+      texto ? h('p', { class: 'sub', text: texto }) : '',
       h('div', { class: 'acoes-coluna' },
         h('button', { class: 'btn primario grande', type: 'button', onclick: () => fim(true) }, botao),
         h('button', { class: 'btn grande fantasma', type: 'button', onclick: () => fim(false) }, 'Cancelar')));

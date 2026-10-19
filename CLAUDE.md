@@ -35,7 +35,7 @@ treino por raias sem pedido dele.
 
 ## Estado atual
 
-- **App v0.13.1 no ar (com login):** https://projetonatacao.com.br/ (ver "Base do app" e "Publicação").
+- **App v0.14.0 no ar (com login):** https://projetonatacao.com.br/ (ver "Base do app" e "Publicação").
 - **Coordenação aprovou (10/10/2026) e mandou a planilha real** (`privado/*.xlsx`: participantes,
   periodização do semestre, treinos semanais, escala). Dados reais entram no app só pelo arquivo de
   importação: `python privado/importar_planilha.py privado/<planilha>.xlsx privado/raia-importacao-<semestre>.json`
@@ -67,6 +67,16 @@ treino por raias sem pedido dele.
   professores** (tabela `escala`: dia, hora, nomes). Na tela de treino: semana, professores do
   horário e o treino do dia (o Dia N é o N-ésimo dia de aula da turma na semana; um plano escrito
   para a data, `planos`, tem prioridade).
+- **Trazer da planilha (v0.14.0, `js/planilha.js`):** a coordenação continua escrevendo os treinos
+  no Excel, uma aba por semana com o período no nome ("19 a 2410", "2610 a 3110"; aceita também
+  "19 a 24/10") e os blocos DIA 1/2/3 (coluna A = AQUECIMENTO, PARTE PRINCIPAL, SOLTURA, TOTAL;
+  B = nado; C = observações), e traz para o app no botão "Trazer da planilha" (tela Semanas,
+  detalhe da semana). O app lê o .xlsx no próprio aparelho (zip + DOMParser, sem biblioteca;
+  precisa de `DecompressionStream('deflate-raw')`), casa cada aba com a semana do planejamento
+  que contém a data de início, mostra o que é novo, o que muda e o que já está igual (espaços
+  repetidos não contam), e grava só os `treinos` das semanas marcadas. Não mexe em turmas, alunos,
+  escala nem nos números da semana (período, volume, intensidade: esses no "Editar semana"). Lê
+  a planilha real igual ao `importar_planilha.py` (conferido em 19/10/2026 nas S1–S9).
 - **Vcrit (v0.7.0, `js/vcrit.js`):** distâncias 200 e 400 m no cronômetro; Vcrit = 200 ÷ (t400 −
   t200) com os melhores 400 e 200 crawl em até 14 dias (o 400 tem de ficar entre 2× e 2,8× o 200).
   Aparece na evolução (professor e aluno) com o tempo-alvo por distância, e no cartão do treino

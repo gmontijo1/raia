@@ -210,11 +210,11 @@ function desenharEsforco(host, balao, todos) {
     const alvo = s('rect', { x: m.l + banda * i, y: m.t, width: banda, height: ph, class: 'g-alvo', tabindex: '0', 'aria-label': `${dataLonga(x.data)}: PSE média ${fmtPse(x.media)}, planejado ${textoPlano(x.planejado)}` });
     const mostrar = () => {
       balao.textContent = '';
-      balao.append(h('b', { text: dataLonga(x.data) }),
+      balao.append(...[h('b', { text: dataLonga(x.data) }),
         h('span', { text: x.turmas.join(', ') }),
         h('span', { text: `PSE média ${fmtPse(x.media)} · ${x.n} ${x.n === 1 ? 'resposta' : 'respostas'}` }),
         x.max > x.min ? h('span', { text: `de ${x.min} a ${x.max}` }) : null,
-        h('span', { text: `Planejado: ${textoPlano(x.planejado)}` }));
+        h('span', { text: `Planejado: ${textoPlano(x.planejado)}` })].filter(Boolean));
       balao.hidden = false;
       const bw = balao.offsetWidth;
       balao.style.left = `${Math.min(Math.max(0, xc(i) - bw / 2), W - bw)}px`;

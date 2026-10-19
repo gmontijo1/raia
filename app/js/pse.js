@@ -74,7 +74,7 @@ export function perguntarPse({ titulo, texto, valor = null, duracao = DURACAO_PA
     const cabeca = h('h3', { id: 'pse-titulo', tabindex: '-1', text: titulo });
     dlg.append(
       cabeca,
-      texto ? h('p', { class: 'sub', text: texto }) : null,
+      texto ? h('p', { class: 'sub', text: texto }) : '',
       h('p', { class: 'dica', text: INSTRUCAO_PSE }),
       escala,
       h('label', { class: 'campo pse-duracao', for: 'pse-dur' }, h('span', { class: 'lbl', text: 'Duração do treino (min)' }), dur),
