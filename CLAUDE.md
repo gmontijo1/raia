@@ -35,7 +35,7 @@ treino por raias sem pedido dele.
 
 ## Estado atual
 
-- **App v0.15.0 no ar (com login):** https://projetonatacao.com.br/ (ver "Base do app" e "Publicação").
+- **App v0.15.1 no ar (com login):** https://projetonatacao.com.br/ (ver "Base do app" e "Publicação").
 - **Coordenação aprovou (10/10/2026) e mandou a planilha real** (`privado/*.xlsx`: participantes,
   periodização do semestre, treinos semanais, escala). Dados reais entram no app só pelo arquivo de
   importação: `python privado/importar_planilha.py privado/<planilha>.xlsx privado/raia-importacao-<semestre>.json`
@@ -142,7 +142,7 @@ direto no navegador. Não usar bundler, npm ou TypeScript: o PC do GÊ não tem 
   `performance.now()` para enquanto o celular dorme com a tela apagada); tocar no nome abre
   o painel do nadador com as repetições de hoje em tempo real, com o próprio LARGADA/PARAR — tela
   cheia no celular, lateral a partir de 900px. **v0.15.0 (pedidos do GÊ depois do 1º treino real):**
-  distância "Outra" além de 25–400 m (campo de 1 a 1.500 m, o limite do `tempos.dist` no banco;
+  distância "Personalizar" além de 25–400 m (campo de 1 a 1.500 m, o limite do `tempos.dist` no banco, mantido de propósito: cabe numa aula de 50 min;
   também no "Lançar tempo à mão"); contador "N reps" em cima do relógio (repetições de hoje na
   distância e estilo atuais; nadando, a nota diz "nadando a 4ª"); botão DESCANSO embaixo da
   LARGADA, com o tempo escolhido em "Descanso" (10 s, 20 s, 30 s, 1 min ou "Outro" até 600 s):

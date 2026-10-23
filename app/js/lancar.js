@@ -9,8 +9,8 @@ export function abrirLancamento({ turmaId, nadadores, nadadorId, dist = 50, esti
   if (nadadorId) sel.value = nadadorId;
   const data = h('input', { id: 'lanc-data', type: 'date', required: true, max: hoje() });
   data.value = hoje();
-  const selDist = h('select', { id: 'lanc-dist' }, DISTANCIAS.map(d => h('option', { value: d, text: `${d} m` })), h('option', { value: 'outra', text: 'Outra…' }));
-  const outra = h('input', { id: 'lanc-dist-outra', type: 'number', inputmode: 'numeric', min: 1, max: DIST_MAX, step: 1, placeholder: 'metros', 'aria-label': 'Outra distância, em metros' });
+  const selDist = h('select', { id: 'lanc-dist' }, DISTANCIAS.map(d => h('option', { value: d, text: `${d} m` })), h('option', { value: 'outra', text: 'Personalizar…' }));
+  const outra = h('input', { id: 'lanc-dist-outra', type: 'number', inputmode: 'numeric', min: 1, max: DIST_MAX, step: 1, placeholder: 'metros', 'aria-label': 'Distância personalizada, em metros' });
   const livre = !DISTANCIAS.includes(+dist);
   selDist.value = livre ? 'outra' : String(dist);
   outra.value = livre ? dist : '';

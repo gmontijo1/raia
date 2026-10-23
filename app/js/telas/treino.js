@@ -123,7 +123,7 @@ function segmentado(nome, rotulo, opcoes, valor, aoMudar) {
   return h('div', { class: 'campo' }, h('span', { class: 'lbl', id: idL, text: rotulo }), g);
 }
 
-// Como o segmentado, com mais uma opção ("Outra") que abre um campo para digitar o número.
+// Como o segmentado, com mais uma opção ("Personalizar", "Outro") que abre um campo para digitar o número.
 function segmentadoLivre({ nome, rotulo, opcoes, valor, rotuloLivre, unidade, max, padrao, aoMudar }) {
   const livre = !opcoes.some(([v]) => v === valor);
   const campo = h('input', { type: 'number', id: `${nome}-valor`, inputmode: 'numeric', min: 1, max, step: 1, 'aria-label': `${rotulo}, em ${unidade}` });
@@ -208,7 +208,7 @@ export async function render(caixa, turmaId) {
   caixa.append(h('div', { class: 'ajustes' },
     segmentadoLivre({
       nome: 'dist', rotulo: 'Distância', opcoes: DISTANCIAS.map(d => [d, `${d} m`]), valor: cfg.dist,
-      rotuloLivre: 'Outra', unidade: 'm', max: DIST_MAX, padrao: 1000,
+      rotuloLivre: 'Personalizar', unidade: 'm', max: DIST_MAX, padrao: 1000,
       aoMudar: v => { cfg.dist = +v; salvarCfg(); pintarTodos(); }
     }),
     segmentado('estilo', 'Estilo', ESTILOS.map(e => [e, e[0].toUpperCase() + e.slice(1)]), cfg.estilo, v => { cfg.estilo = v; salvarCfg(); pintarTodos(); }),
