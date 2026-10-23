@@ -5,7 +5,7 @@
 // "Encerrar treino" tira o nadador da lista de hoje e manda os dados dele para a nuvem na hora;
 // "Encerrar treino da turma" faz isso com todos e abre o resumo (telas/resumo.js).
 
-import { h, aviso, perguntar, fmtTempo, fmtDelta, combo, combos, hoje, hora, dataLonga, ESTILOS, DISTANCIAS, porTreino, doCombo, melhorDe, naoEncontrado } from '../util.js';
+import { h, aviso, perguntar, fmtTempo, fmtDelta, combo, combos, hoje, hora, dataLonga, ESTILOS, DISTANCIAS, DIST_MAX, porTreino, doCombo, melhorDe, naoEncontrado } from '../util.js';
 import * as db from '../db.js';
 import { minigrafico } from '../grafico.js';
 import { abrirLancamento } from '../lancar.js';
@@ -18,19 +18,20 @@ import { vcritAtual, alvoVcrit } from '../vcrit.js';
 import { perguntarPse, chipPse, DURACAO_PADRAO } from '../pse.js';
 
 // Estado do cronômetro por turma. Fica na memória enquanto o app está aberto, então dá
-// para olhar outra tela e voltar sem perder quem está nadando. Quem está nadando (e quem
-// faltou) também fica guardado no aparelho na hora: se o celular fechar o app ou a página
-// recarregar no meio de uma repetição, o cronômetro volta rodando de onde estava.
+// para olhar outra tela e voltar sem perder quem está nadando. Quem está nadando, quem está
+// no descanso e quem faltou também ficam guardados no aparelho na hora: se o celular fechar o
+// app ou a página recarregar no meio de uma repetição, o cronômetro volta de onde estava.
 const CHAVE_CRON = 'raia-cronometros';
 const sessoes = new Map();
 function sessao(turmaId) {
   if (!sessoes.has(turmaId)) {
-    const S = { ausentes: new Set(), rodando: new Map(), ultimo: new Map(), pausa: new Map() };
+    const S = { ausentes: new Set(), rodando: new Map(), descanso: new Map(), ultimo: new Map(), pausa: new Map() };
     try {
       const g = JSON.parse(localStorage.getItem(CHAVE_CRON) || '{}')[turmaId];
       if (g && g.data === hoje()) {
         const p = performance.now(), agora = Date.now();
         for (const [id, R] of g.rodando) S.rodando.set(id, { ...R, t0: p - (agora - R.inicioEm) });
+        for (const [id, D] of g.descanso || []) S.descanso.set(id, { ...D, avisou: D.fimEm <= agora });
         for (const id of g.ausentes) S.ausentes.add(id);
       }
     } catch (e) { /* guardado ilegível: começa do zero */ }
@@ -44,14 +45,46 @@ function guardarCronometros() {
     const tudo = JSON.parse(localStorage.getItem(CHAVE_CRON) || '{}');
     for (const k of Object.keys(tudo)) if (tudo[k].data !== hoje()) delete tudo[k];
     for (const [turmaId, S] of sessoes) {
-      if (!S.rodando.size && !S.ausentes.size) { delete tudo[turmaId]; continue; }
+      if (!S.rodando.size && !S.ausentes.size && !S.descanso.size) { delete tudo[turmaId]; continue; }
       tudo[turmaId] = { data: hoje(), ausentes: [...S.ausentes],
-        rodando: [...S.rodando].map(([id, R]) => [id, { inicioEm: R.inicioEm, dist: R.dist, estilo: R.estilo }]) };
+        rodando: [...S.rodando].map(([id, R]) => [id, { inicioEm: R.inicioEm, dist: R.dist, estilo: R.estilo }]),
+        descanso: [...S.descanso].map(([id, D]) => [id, { fimEm: D.fimEm, total: D.total }]) };
     }
     localStorage.setItem(CHAVE_CRON, JSON.stringify(tudo));
   } catch (e) { /* sem espaço ou guardado ilegível: fica só na memória */ }
 }
-const algumRodando = () => [...sessoes.values()].some(S => S.rodando.size > 0);
+const algumRodando = () => [...sessoes.values()].some(S => S.rodando.size > 0 || S.descanso.size > 0);
+
+// Descanso: contagem regressiva até a próxima saída. Passou do tempo, conta o atraso ("+0:05").
+const DESCANSOS = [10, 20, 30, 60];   // segundos; "Outro" deixa digitar
+const DESCANSO_MAX = 600;
+const fmtRelogio = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+function estadoDescanso(D, agora = Date.now()) {
+  const falta = (D.fimEm - agora) / 1000;
+  return falta > 0 ? { acabou: false, texto: fmtRelogio(Math.ceil(falta)) } : { acabou: true, texto: `+${fmtRelogio(Math.floor(-falta))}` };
+}
+
+// Bipe curto no fim do descanso (o som só pode começar depois de um toque na tela).
+let som = null;
+function prepararSom() {
+  try {
+    som = som || new (window.AudioContext || window.webkitAudioContext)();
+    if (som.state === 'suspended') som.resume();
+  } catch (e) { som = null; }
+}
+function bipe() {
+  if (!som) return;
+  try {
+    const o = som.createOscillator(), g = som.createGain(), t = som.currentTime;
+    o.frequency.value = 880;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.4, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+    o.connect(g).connect(som.destination);
+    o.start(t);
+    o.stop(t + 0.4);
+  } catch (e) { /* sem som */ }
+}
 
 // Segundos desde a LARGADA. Vale o performance.now(), que não pula quando o celular acerta o
 // relógio; mas ele para enquanto o celular "dorme" com a tela apagada, e aí vale o relógio.
@@ -90,16 +123,43 @@ function segmentado(nome, rotulo, opcoes, valor, aoMudar) {
   return h('div', { class: 'campo' }, h('span', { class: 'lbl', id: idL, text: rotulo }), g);
 }
 
+// Como o segmentado, com mais uma opção ("Outra") que abre um campo para digitar o número.
+function segmentadoLivre({ nome, rotulo, opcoes, valor, rotuloLivre, unidade, max, padrao, aoMudar }) {
+  const livre = !opcoes.some(([v]) => v === valor);
+  const campo = h('input', { type: 'number', id: `${nome}-valor`, inputmode: 'numeric', min: 1, max, step: 1, 'aria-label': `${rotulo}, em ${unidade}` });
+  campo.value = livre ? valor : '';
+  const erro = h('span', { class: 'erro-campo', role: 'alert' });
+  const caixa = h('span', { class: 'seg-livre', hidden: !livre }, campo, h('span', { class: 'sub', text: unidade }), erro);
+  const usar = () => {
+    const n = Math.round(Number(campo.value));
+    const ok = campo.value !== '' && n >= 1 && n <= max;
+    erro.textContent = ok ? '' : `de 1 a ${max.toLocaleString('pt-BR')}`;
+    if (ok) aoMudar(n);
+  };
+  campo.addEventListener('input', usar);
+  const el = segmentado(nome, rotulo, [...opcoes, ['livre', rotuloLivre]], livre ? 'livre' : valor, v => {
+    caixa.hidden = v !== 'livre';
+    if (v !== 'livre') { aoMudar(v); return; }
+    if (!campo.value) campo.value = padrao;
+    usar();
+    campo.focus();
+    campo.select();
+  });
+  el.append(caixa);
+  return el;
+}
+
 export async function render(caixa, turmaId) {
   const t = await db.turma(turmaId);
   if (!t || t.apagado) { caixa.append(naoEncontrado('Turma')); return; }
   const nads = await db.nadadoresDaTurma(turmaId);
   const tempos = await db.temposDaTurma(turmaId);
-  const cfg = { dist: 50, estilo: 'crawl', ...(await db.config.get('treino', {})) };
+  const cfg = { dist: 50, estilo: 'crawl', descanso: 20, ...(await db.config.get('treino', {})) };
   const S = sessao(turmaId);
   const dHoje = hoje();
   const porId = new Map(nads.map(n => [n.id, n]));
   for (const id of S.rodando.keys()) if (!porId.has(id)) S.rodando.delete(id);   // arquivado no meio
+  for (const id of S.descanso.keys()) if (!porId.has(id)) S.descanso.delete(id);
   // Quem já encerrou o treino de hoje (guardado no aparelho; vale só para o dia).
   const chaveEnc = `encerrados:${turmaId}`;
   const guardados = await db.config.get(chaveEnc, null);
@@ -143,11 +203,20 @@ export async function render(caixa, turmaId) {
     return;
   }
 
-  /* distância e estilo da próxima largada */
-  const salvarCfg = () => db.config.set('treino', { dist: cfg.dist, estilo: cfg.estilo });
+  /* distância e estilo da próxima largada, e o tempo de descanso */
+  const salvarCfg = () => db.config.set('treino', { dist: cfg.dist, estilo: cfg.estilo, descanso: cfg.descanso });
   caixa.append(h('div', { class: 'ajustes' },
-    segmentado('dist', 'Distância', DISTANCIAS.map(d => [d, `${d} m`]), cfg.dist, v => { cfg.dist = +v; salvarCfg(); pintarTodos(); }),
-    segmentado('estilo', 'Estilo', ESTILOS.map(e => [e, e[0].toUpperCase() + e.slice(1)]), cfg.estilo, v => { cfg.estilo = v; salvarCfg(); pintarTodos(); })));
+    segmentadoLivre({
+      nome: 'dist', rotulo: 'Distância', opcoes: DISTANCIAS.map(d => [d, `${d} m`]), valor: cfg.dist,
+      rotuloLivre: 'Outra', unidade: 'm', max: DIST_MAX, padrao: 1000,
+      aoMudar: v => { cfg.dist = +v; salvarCfg(); pintarTodos(); }
+    }),
+    segmentado('estilo', 'Estilo', ESTILOS.map(e => [e, e[0].toUpperCase() + e.slice(1)]), cfg.estilo, v => { cfg.estilo = v; salvarCfg(); pintarTodos(); }),
+    segmentadoLivre({
+      nome: 'desc', rotulo: 'Descanso', opcoes: DESCANSOS.map(s => [s, s < 60 ? `${s} s` : `${s / 60} min`]), valor: cfg.descanso,
+      rotuloLivre: 'Outro', unidade: 's', max: DESCANSO_MAX, padrao: 45,
+      aoMudar: v => { cfg.descanso = +v; salvarCfg(); }
+    })));
 
   /* presença */
   const resumoPresenca = h('summary');
@@ -212,7 +281,7 @@ export async function render(caixa, turmaId) {
     grade.textContent = '';
     for (const n of nads) {
       if (S.ausentes.has(n.id) || S.encerrados.has(n.id)) continue;
-      const rep = h('span', { class: 'nad-rep', hidden: true });
+      const reps = h('div', { class: 'at-reps' });
       const melhor = h('span');
       const mini = h('span');
       const nota = h('div', { class: 'at-nota' });
@@ -220,15 +289,16 @@ export async function render(caixa, turmaId) {
       const encerrar = h('button', { class: 'btn pequeno at-encerrar', type: 'button', onclick: () => encerrarNadador(n.id) }, 'Encerrar treino');
       const relogio = h('div', { class: 'at-relogio', 'aria-live': 'off' });
       const botao = h('button', { class: 'btn-cron', type: 'button', onclick: () => tocar(n.id) });
+      const descanso = h('button', { class: 'btn-cron descanso', type: 'button', onclick: () => descansar(n.id) });
       const nomeBtn = h('button', { class: 'at-nome-btn', type: 'button', 'aria-label': `Ver as repetições de hoje de ${n.nome}`, onclick: () => abrirPainel(n.id) },
         h('span', { text: n.nome }), h('span', { class: 'seta', 'aria-hidden': 'true', text: '›' }));
       const card = h('div', { class: 'atleta', 'data-st': 'pronto' },
         h('div', { class: 'at-info' },
-          h('div', { class: 'at-nome' }, nomeBtn, rep),
+          h('div', { class: 'at-nome' }, nomeBtn),
           h('div', { class: 'at-melhor' }, melhor, mini),
           nota, cancelar, encerrar),
-        h('div', { class: 'at-acao' }, relogio, botao));
-      cards.set(n.id, { card, rep, melhor, mini, nota, cancelar, encerrar, relogio, botao, nomeBtn, nome: n.nome });
+        h('div', { class: 'at-acao' }, reps, relogio, botao, descanso));
+      cards.set(n.id, { card, reps, melhor, mini, nota, cancelar, encerrar, relogio, botao, descanso, nomeBtn, nome: n.nome });
       grade.append(card);
     }
     for (const [id, cb] of caixasPresenca) cb.disabled = S.rodando.has(id);
@@ -252,20 +322,23 @@ export async function render(caixa, turmaId) {
     c.mini.textContent = '';
     const g = minigrafico(porTreino(seus).slice(-8));
     if (g) c.mini.append(g);
+    // repetições de hoje nesta distância e estilo, ao lado do botão
     const reps = seus.filter(r => r.data === dHoje).length;
-    c.rep.hidden = !reps;
-    c.rep.textContent = `${reps} hoje`;
+    c.reps.replaceChildren(h('b', { text: String(reps) }), reps === 1 ? ' rep' : ' reps');
+    c.reps.setAttribute('aria-label', `${reps} ${reps === 1 ? 'repetição' : 'repetições'} hoje nos ${combo(d, e)}`);
     c.nota.textContent = '';
+    pintarDescanso(c.descanso, id);
     if (R) {
       c.card.dataset.st = 'nadando';
       c.botao.textContent = 'PARAR';
       c.botao.className = 'btn-cron parar';
       c.botao.setAttribute('aria-label', `Parar o tempo de ${c.nome}`);
       c.cancelar.hidden = false;
-      c.nota.append(h('span', { text: `nadando ${combo(R.dist, R.estilo)}` }));
+      c.nota.append(h('span', { text: `nadando a ${reps + 1}ª · ${combo(R.dist, R.estilo)}` }));
     } else {
       const ult = S.ultimo.get(id);
-      c.card.dataset.st = ult ? 'chegou' : 'pronto';
+      const D = S.descanso.get(id);
+      c.card.dataset.st = D ? (estadoDescanso(D).acabou ? 'sair' : 'descanso') : ult ? 'chegou' : 'pronto';
       c.botao.textContent = 'LARGADA';
       c.botao.className = 'btn-cron largar';
       c.botao.setAttribute('aria-label', `Largada de ${c.nome}`);
@@ -284,8 +357,43 @@ export async function render(caixa, turmaId) {
     btnTodos.hidden = prontos < 2;
   }
 
+  // DESCANSO: parado, mostra "DESCANSO"; contando, o que falta; no fim, "SAIR" e o atraso.
+  function pintarDescanso(btn, id) {
+    const nome = porId.get(id).nome;
+    btn.hidden = S.rodando.has(id);
+    const D = S.descanso.get(id);
+    if (!D) {
+      btn.dataset.fase = '';
+      btn.dataset.t = '';
+      btn.replaceChildren('DESCANSO');
+      btn.setAttribute('aria-label', `Começar o descanso de ${nome}`);
+      return;
+    }
+    const e = estadoDescanso(D);
+    btn.dataset.fase = e.acabou ? 'sair' : 'contando';
+    btn.dataset.t = e.texto;
+    btn.replaceChildren(h('span', { class: 'desc-rot', text: e.acabou ? 'SAIR' : 'DESCANSO' }), h('span', { class: 'desc-t', text: e.texto }));
+    btn.setAttribute('aria-label', `${e.acabou ? `Descanso de ${nome} acabou (${e.texto})` : `Descanso de ${nome}: faltam ${e.texto}`}. Toque para cancelar`);
+  }
+  // Tocar em DESCANSO começa a contagem; tocar de novo cancela. A LARGADA também encerra o descanso.
+  function descansar(id) {
+    if (S.rodando.has(id)) return;
+    if (S.descanso.has(id)) S.descanso.delete(id);
+    else {
+      prepararSom();
+      S.descanso.set(id, { fimEm: Date.now() + cfg.descanso * 1000, total: cfg.descanso, avisou: false });
+      manterTelaAcesa();
+    }
+    guardarCronometros();
+    vibrar(15);
+    pintar(id);
+    iniciarTick();
+    if (!algumRodando()) liberarTela();
+  }
+
   function largar(id, t0, inicioEm) {
     if ((S.pausa.get(id) || 0) > performance.now() || S.rodando.has(id)) return;
+    S.descanso.delete(id);
     S.rodando.set(id, { t0, inicioEm, dist: cfg.dist, estilo: cfg.estilo });
     if (painelId === id) painelCombo = `${cfg.dist}|${cfg.estilo}`;
     const cb = caixasPresenca.get(id);
@@ -371,6 +479,7 @@ export async function render(caixa, turmaId) {
   let painelId = null;       // nadador aberto no painel
   let painelCombo = null;    // "dist|estilo" mostrado; null = escolher sozinho
   let painelRelogio = null;  // relógio do painel, atualizado pelo tick
+  let painelDescanso = null; // botão DESCANSO do painel, também atualizado pelo tick
 
   function abrirPainel(id) {
     painelId = id;
@@ -384,6 +493,7 @@ export async function render(caixa, turmaId) {
     const id = painelId;
     painelId = null;
     painelRelogio = null;
+    painelDescanso = null;
     painel.hidden = true;
     painel.textContent = '';
     cards.get(id)?.nomeBtn.focus();
@@ -420,13 +530,15 @@ export async function render(caixa, turmaId) {
       botao.setAttribute('aria-label', `Largada de ${n.nome}`);
     }
     botao.disabled = (S.pausa.get(id) || 0) > performance.now();
+    painelDescanso = h('button', { class: 'btn-cron descanso', type: 'button', onclick: () => descansar(id) });
+    pintarDescanso(painelDescanso, id);
     const cab = h('div', { class: 'painel-cab', 'data-st': R ? 'nadando' : 'pronto' },
       h('div', { class: 'at-info' },
         h('h3', { id: 'painel-titulo', class: 'painel-nome', tabindex: '-1', text: n.nome }),
         h('p', { class: 'sub', text: `Treino de hoje · ${dataLonga(dHoje)}` }),
         h('p', { class: 'at-nota', text: R ? `nadando ${combo(R.dist, R.estilo)}` : `próxima largada: ${combo(cfg.dist, cfg.estilo)}` }),
         R ? h('button', { class: 'link', type: 'button', onclick: () => cancelarLargada(id) }, 'Cancelar largada') : null),
-      h('div', { class: 'at-acao' }, painelRelogio, botao));
+      h('div', { class: 'at-acao' }, painelRelogio, botao, painelDescanso));
     const encerrarBtn = h('button', { class: 'btn grande', type: 'button', disabled: !!R, onclick: () => encerrarNadador(id) }, `Encerrar treino de ${n.nome}`);
 
     /* escolha de distância e estilo, se ele nadou mais de um hoje */
@@ -479,8 +591,11 @@ export async function render(caixa, turmaId) {
     if (resp.valor != null) await gravarPse(id, resp);
     if (painelId === id) fecharPainel();
     S.encerrados.add(id);
+    S.descanso.delete(id);
+    guardarCronometros();
     await salvarEncerrados();
     montar();
+    if (!algumRodando()) liberarTela();
     enviarAgora(`Treino de ${n.nome}`);
   }
 
@@ -496,7 +611,7 @@ export async function render(caixa, turmaId) {
       botao: 'Encerrar e ver resumo'
     });
     if (!ok) return;
-    for (const id of cards.keys()) { S.rodando.delete(id); S.encerrados.add(id); }
+    for (const id of cards.keys()) { S.rodando.delete(id); S.descanso.delete(id); S.encerrados.add(id); }
     guardarCronometros();
     await salvarEncerrados();
     if (!algumRodando()) liberarTela();
@@ -575,6 +690,22 @@ export async function render(caixa, turmaId) {
       c.relogio.textContent = fmtTempo(decorrido(R, agora));
       if (painelId === id && painelRelogio) painelRelogio.textContent = c.relogio.textContent;
     }
+    // descanso: muda o texto a cada segundo; no fim, vibra, apita e o cartão vira "SAIR"
+    for (const [id, D] of S.descanso) {
+      const c = cards.get(id);
+      if (!c) continue;
+      algum = true;
+      const e = estadoDescanso(D);
+      if (e.acabou && !D.avisou) {
+        D.avisou = true;
+        vibrar([200, 100, 200]);
+        bipe();
+        pintar(id);
+        continue;
+      }
+      if (c.descanso.dataset.t !== e.texto) pintarDescanso(c.descanso, id);
+      if (painelId === id && painelDescanso && painelDescanso.dataset.t !== e.texto) pintarDescanso(painelDescanso, id);
+    }
     if (algum) raf = requestAnimationFrame(tick);
   }
   function iniciarTick() { if (!raf) raf = requestAnimationFrame(tick); }
@@ -617,7 +748,7 @@ export async function render(caixa, turmaId) {
 
   montar();
   listarSessao();
-  if (S.rodando.size) manterTelaAcesa();   // voltou com alguém nadando
+  if (S.rodando.size || S.descanso.size) manterTelaAcesa();   // voltou com alguém nadando ou descansando
   const pararDeOuvir = aoMudarEstado(() => pintarEncerrados());   // "Enviando…" → "Salvo na nuvem"
 
   return () => {

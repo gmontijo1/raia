@@ -79,7 +79,9 @@ export function lerTempo(txt) {
 
 export const dec1 = x => x.toFixed(1).replace('.', ',');
 export const dec2 = x => x.toFixed(2).replace('.', ',');
-export const combo = (dist, estilo) => `${dist} m ${estilo}`;
+export const combo = (dist, estilo) => `${Number(dist).toLocaleString('pt-BR')} m ${estilo}`;
+// Distância digitada fora dos botões (ex.: 1.000 m, 1.500 m). O limite é o mesmo do banco.
+export const DIST_MAX = 1500;
 
 /* ---------- datas (sempre no fuso do aparelho) ---------- */
 export const isoLocal = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -110,7 +112,7 @@ export function porTreino(tempos) {
 export function combos(tempos) {
   const vistos = new Map();
   for (const r of tempos) vistos.set(`${r.dist}|${r.estilo}`, [r.dist, r.estilo]);
-  const peso = ([d, e]) => ESTILOS.indexOf(e) * 1000 + (d === 50 ? 0 : d);
+  const peso = ([d, e]) => ESTILOS.indexOf(e) * 100000 + (d === 50 ? 0 : d);
   return [...vistos.values()].sort((a, b) => peso(a) - peso(b));
 }
 export const doCombo = (tempos, dist, estilo) => tempos.filter(r => r.dist === dist && r.estilo === estilo);
